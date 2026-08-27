@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import type { SessionExercise } from '../api/types';
+import type { SessionExercise, Stage } from '../api/types';
 import ProgressBar from '../components/ProgressBar';
 import TileExercise from '../components/TileExercise';
 import TypedExercise from '../components/TypedExercise';
@@ -14,7 +14,49 @@ interface ErrorState {
   retry: () => void;
 }
 
+/** A moment worth celebrating on the completion screen. */
+interface SessionEvent {
+  icon: string;
+  iconBg: string;
+  title: string;
+  detail: string;
+  detailColor: string;
+}
+
 const TOAST_MS = 2500;
+
+/** Stage transitions that read as wins on the completion screen. */
+function celebrationEvent(reference: string, from: Stage, to: Stage): SessionEvent | null {
+  if (from === to) return null;
+  if (to === 'learning_medium' || to === 'learning_heavy') {
+    return {
+      icon: '↑',
+      iconBg: 'var(--coral-wash)',
+      title: reference,
+      detail: `${STAGE_LABELS[from]} → ${STAGE_LABELS[to]}`,
+      detailColor: 'var(--coral-text)',
+    };
+  }
+  if (to === 'review' && from !== 'decayed') {
+    return {
+      icon: '✓',
+      iconBg: 'var(--green-wash)',
+      title: reference,
+      detail: 'Graduated — now in review',
+      detailColor: 'var(--green-text)',
+    };
+  }
+  if (to === 'mastered') {
+    return {
+      icon: '✓',
+      iconBg: 'var(--green-wash)',
+      title: reference,
+      detail: 'Mastered — well kept',
+      detailColor: 'var(--green-text)',
+    };
+  }
+  return null;
+}
 
 /**
  * The exercise runner. Holds today's queue in local state and steps through
@@ -30,6 +72,8 @@ export default function Session() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
+  const [events, setEvents] = useState<SessionEvent[]>([]);
+  const [correctCount, setCorrectCount] = useState(0);
   const [completion, setCompletion] = useState<{ recorded: boolean; streak: number | null } | null>(null);
 
   const load = useCallback(async () => {
@@ -77,6 +121,18 @@ export default function Session() {
     setPhase('finishing');
     try {
       const result = await api.sessionComplete();
+      if (result.slotsFilled.length > 0) {
+        setEvents((prev) => [
+          ...prev,
+          ...result.slotsFilled.map((uv) => ({
+            icon: '🔓',
+            iconBg: 'var(--amber-wash)',
+            title: uv.slot !== null ? `Slot ${uv.slot} unlocked` : 'New verse unlocked',
+            detail: 'A new verse joins your practice',
+            detailColor: 'var(--amber-soft)',
+          })),
+        ]);
+      }
       let streak: number | null = null;
       try {
         streak = (await api.me()).streak;
@@ -101,8 +157,11 @@ export default function Session() {
     const exercise = queue[index];
     try {
       const outcome = await api.attempt(exercise.userVerseId, exercise.exerciseType, correct);
+      if (correct) setCorrectCount((n) => n + 1);
       const message = stageChangeMessage(exercise.stage, outcome.userVerse.stage);
       if (message) setToast(message);
+      const event = celebrationEvent(exercise.reference, exercise.stage, outcome.userVerse.stage);
+      if (event) setEvents((prev) => [...prev, event]);
       if (index + 1 < queue.length) {
         setIndex(index + 1);
       } else {
@@ -151,23 +210,55 @@ export default function Session() {
   }
 
   if (phase === 'done' && completion) {
+    const verseCount = new Set(queue.map((e) => e.verseId)).size;
+    const cleanNote =
+      correctCount === queue.length
+        ? 'a clean sweep'
+        : correctCount > 0
+          ? `zero misses on ${correctCount} of them`
+          : 'every miss still teaches';
     return (
-      <main className="shell stack">
-        <p className="eyebrow">Session complete</p>
-        <h1 style={{ fontFamily: 'var(--serif)' }}>Well done</h1>
-        <p>
-          <strong>{queue.length}</strong> {queue.length === 1 ? 'exercise' : 'exercises'} finished.
-        </p>
+      <main className="complete-screen">
         {completion.streak !== null && (
-          <div className="streak-badge">
-            <span className="streak-count">{completion.streak}</span>
-            <span className="muted">day streak</span>
+          <>
+            <div className="complete-circle">
+              <span className="complete-circle-count">{completion.streak}</span>
+            </div>
+            <div className="complete-eyebrow">Day streak</div>
+          </>
+        )}
+        <h1 className="complete-title">Kept the day.</h1>
+        <p className="complete-sub">
+          {queue.length} {queue.length === 1 ? 'exercise' : 'exercises'} · {verseCount}{' '}
+          {verseCount === 1 ? 'verse' : 'verses'} · {cleanNote}
+        </p>
+
+        {events.length > 0 && (
+          <div className="complete-events">
+            {events.map((event, i) => (
+              <div key={i} className="complete-event">
+                <span className="complete-event-icon" style={{ background: event.iconBg }} aria-hidden="true">
+                  {event.icon}
+                </span>
+                <div>
+                  <div className="complete-event-title">{event.title}</div>
+                  <div className="complete-event-detail" style={{ color: event.detailColor }}>
+                    {event.detail}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
+
         {!completion.recorded && (
-          <p className="small muted">Today&rsquo;s session was already counted — extra practice never hurts.</p>
+          <p className="small complete-sub">
+            Today&rsquo;s session was already counted — extra practice never hurts.
+          </p>
         )}
-        <Link to="/" className="btn">Back to home</Link>
+        <Link to="/" className="btn" style={{ marginTop: 22 }}>
+          Back home
+        </Link>
       </main>
     );
   }
@@ -179,15 +270,16 @@ export default function Session() {
     <main className="shell stack">
       {toast && <div className="toast" role="status">{toast}</div>}
 
-      <header className="stack" style={{ gap: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span className="small muted">
-            {index + 1} of {queue.length} ·{' '}
-            {exercise.queue === 'review' ? 'Review' : STAGE_LABELS[exercise.stage]}
-          </span>
-          <Link to="/" className="small">Exit</Link>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Link to="/" className="icon-btn" aria-label="Exit session">
+          ✕
+        </Link>
+        <div style={{ flex: 1 }}>
+          <ProgressBar done={index} total={queue.length} />
         </div>
-        <ProgressBar done={index} total={queue.length} />
+        <span className="progress-count">
+          {index + 1}/{queue.length}
+        </span>
       </header>
 
       {exercise.exerciseType === 'tile_fill_blank' ? (

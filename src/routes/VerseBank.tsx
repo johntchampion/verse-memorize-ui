@@ -13,7 +13,11 @@ function bookOf(reference: string): string {
 function StatusChip({ verse }: { verse: VerseListItem }) {
   switch (verse.status) {
     case 'locked':
-      return <span className="chip chip-locked">Locked</span>;
+      return (
+        <span style={{ fontSize: '0.85rem', color: 'var(--locked)' }} aria-label="Locked">
+          🔒
+        </span>
+      );
     case 'active':
       return <span className="chip chip-active">{verse.stage ? STAGE_LABELS[verse.stage] : 'Learning'}</span>;
     case 'review':
@@ -24,6 +28,19 @@ function StatusChip({ verse }: { verse: VerseListItem }) {
       );
     case 'mastered':
       return <span className="chip chip-mastered">Mastered</span>;
+  }
+}
+
+function cellClass(verse: VerseListItem): string {
+  switch (verse.status) {
+    case 'mastered':
+      return 'kept-cell kept-mastered';
+    case 'review':
+      return 'kept-cell kept-review';
+    case 'active':
+      return 'kept-cell kept-active';
+    default:
+      return 'kept-cell';
   }
 }
 
@@ -47,6 +64,8 @@ export default function VerseBank() {
     );
   }
 
+  const started = data.verses.filter((v) => v.status !== 'locked').length;
+
   // Verses arrive in `order`; consecutive runs of the same book form groups.
   const groups: { book: string; verses: VerseListItem[] }[] = [];
   for (const verse of data.verses) {
@@ -62,29 +81,46 @@ export default function VerseBank() {
   return (
     <main className="shell">
       <header className="screen-header">
-        <Link to="/" className="back-link">← Home</Link>
+        <Link to="/" className="icon-btn" aria-label="Back to home">
+          ←
+        </Link>
         <h1>Verse bank</h1>
       </header>
-      <p className="muted small">
-        {data.verses.length} verses in all. Locked verses open as you progress — no skipping ahead.
-      </p>
+
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>
+            {started} of {data.verses.length} kept
+          </span>
+          <span className="small muted" style={{ fontWeight: 700 }}>
+            no skipping ahead
+          </span>
+        </div>
+        <div className="kept-grid" aria-hidden="true">
+          {data.verses.map((verse) => (
+            <span key={verse.id} className={cellClass(verse)} />
+          ))}
+        </div>
+      </div>
 
       {groups.map((group) => (
         <section key={`${group.book}-${group.verses[0].order}`} aria-label={group.book}>
           <h2 className="book-heading">{group.book}</h2>
-          {group.verses.map((verse) =>
-            verse.status === 'locked' ? (
-              <div key={verse.id} className="verse-row verse-row-locked">
-                <span className="verse-row-reference">{verse.reference}</span>
-                <StatusChip verse={verse} />
-              </div>
-            ) : (
-              <Link key={verse.id} to={`/verses/${verse.id}`} className="verse-row" style={{ color: 'inherit' }}>
-                <span className="verse-row-reference">{verse.reference}</span>
-                <StatusChip verse={verse} />
-              </Link>
-            ),
-          )}
+          <div className="verse-list">
+            {group.verses.map((verse) =>
+              verse.status === 'locked' ? (
+                <div key={verse.id} className="verse-row verse-row-locked">
+                  <span className="verse-row-reference">{verse.reference}</span>
+                  <StatusChip verse={verse} />
+                </div>
+              ) : (
+                <Link key={verse.id} to={`/verses/${verse.id}`} className="verse-row" style={{ color: 'inherit' }}>
+                  <span className="verse-row-reference">{verse.reference}</span>
+                  <StatusChip verse={verse} />
+                </Link>
+              ),
+            )}
+          </div>
         </section>
       ))}
     </main>

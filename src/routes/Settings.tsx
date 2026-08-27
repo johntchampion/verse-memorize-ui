@@ -10,6 +10,10 @@ function timezoneOptions(current: string): string[] {
   return zones.includes(current) ? zones : [current, ...zones];
 }
 
+function memberSince(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+}
+
 export default function Settings() {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -64,25 +68,54 @@ export default function Settings() {
 
   return (
     <main className="shell stack">
-      <header className="screen-header">
-        <Link to="/" className="back-link">← Home</Link>
+      <header className="screen-header" style={{ marginBottom: 0 }}>
+        <Link to="/" className="icon-btn" aria-label="Back to home">
+          ←
+        </Link>
         <h1>Settings</h1>
       </header>
 
-      <section className="card stack" aria-label="Account">
-        <p className="eyebrow">Account</p>
-        <p>{data.user.email}</p>
-        <p className="small muted">
-          {data.sessionsCompleted} {data.sessionsCompleted === 1 ? 'session' : 'sessions'} completed ·{' '}
-          {data.versesStarted} {data.versesStarted === 1 ? 'verse' : 'verses'} started
-        </p>
+      <section className="card" aria-label="Account">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span className="avatar" aria-hidden="true">
+            {data.user.email.charAt(0).toUpperCase()}
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', overflowWrap: 'anywhere' }}>
+              {data.user.email}
+            </div>
+            <div className="small muted" style={{ fontWeight: 700, fontSize: '0.78rem' }}>
+              Member since {memberSince(data.user.createdAt)}
+            </div>
+          </div>
+        </div>
+        <div className="stat-tiles" style={{ marginTop: 14 }}>
+          <div className="stat-tile">
+            <div className="stat-tile-big">{data.sessionsCompleted}</div>
+            <div className="stat-tile-label">
+              {data.sessionsCompleted === 1 ? 'session' : 'sessions'}
+            </div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-tile-big">{data.versesStarted}</div>
+            <div className="stat-tile-label">
+              {data.versesStarted === 1 ? 'verse started' : 'verses started'}
+            </div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-tile-big">{data.streak}</div>
+            <div className="stat-tile-label">day streak</div>
+          </div>
+        </div>
       </section>
 
       <section className="card stack" aria-label="Timezone">
-        <p className="eyebrow">Timezone</p>
-        <p className="small muted">
-          Sets when your day rolls over — streaks and review due dates follow it.
-        </p>
+        <div>
+          <p className="eyebrow">Timezone</p>
+          <p className="small muted" style={{ fontWeight: 600, marginTop: 6 }}>
+            Sets when your day rolls over — streaks and review due dates follow it.
+          </p>
+        </div>
         <div className="field">
           <label htmlFor="timezone">Timezone</label>
           <select
@@ -101,13 +134,17 @@ export default function Settings() {
           </select>
         </div>
         {saveError && <p className="error-text" role="alert">{saveError}</p>}
-        {saved && <p className="small" style={{ color: 'var(--gilt)', fontWeight: 600 }}>Saved.</p>}
+        {saved && (
+          <p className="small" style={{ color: 'var(--green-text)', fontWeight: 800 }}>
+            Saved.
+          </p>
+        )}
         <button className="btn" onClick={() => void save()} disabled={saving || timezone === currentTimezone}>
           {saving ? 'Saving…' : 'Save timezone'}
         </button>
       </section>
 
-      <button className="btn-ghost" onClick={signOut} style={{ color: 'var(--carmine)' }}>
+      <button className="btn-ghost" onClick={signOut} style={{ color: 'var(--coral-text)' }}>
         Sign out
       </button>
     </main>

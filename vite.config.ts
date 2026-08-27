@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Verse Memorize',
         short_name: 'Verses',
         description: 'Daily scripture memorization — three verses at a time.',
-        theme_color: '#fbf9f4',
-        background_color: '#fbf9f4',
+        theme_color: '#fff6ea',
+        background_color: '#fff6ea',
         display: 'standalone',
         start_url: '/',
         icons: [

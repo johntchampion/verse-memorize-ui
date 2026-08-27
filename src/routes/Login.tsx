@@ -35,9 +35,11 @@ export default function Login() {
 
   return (
     <main className="auth-shell">
-      <p className="eyebrow">Verse Memorize</p>
-      <h1 className="auth-title">Welcome back</h1>
-      <p className="muted" style={{ marginBottom: 28 }}>
+      <div className="auth-logo" aria-hidden="true">
+        V
+      </div>
+      <h1 className="auth-title">Welcome back.</h1>
+      <p className="muted" style={{ fontWeight: 600, marginBottom: 26 }}>
         Pick up today&rsquo;s practice where you left off.
       </p>
       <form className="stack" onSubmit={onSubmit} noValidate>

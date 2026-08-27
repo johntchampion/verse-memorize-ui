@@ -35,9 +35,11 @@ export default function Signup() {
 
   return (
     <main className="auth-shell">
-      <p className="eyebrow">Verse Memorize</p>
-      <h1 className="auth-title">Hide the word in your heart</h1>
-      <p className="muted" style={{ marginBottom: 28 }}>
+      <div className="auth-logo" aria-hidden="true">
+        V
+      </div>
+      <h1 className="auth-title">Hide the word in your heart.</h1>
+      <p className="muted" style={{ fontWeight: 600, marginBottom: 26 }}>
         A few minutes a day, three verses at a time, one hundred in all.
       </p>
       <form className="stack" onSubmit={onSubmit} noValidate>

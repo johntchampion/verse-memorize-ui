@@ -4,9 +4,16 @@
    Warm and game-like: cream paper ground, coral for actions with a chunky
    pressed shadow, amber for streaks and momentum, green for wins. Scripture
    is set in Source Serif 4; the app chrome is Nunito.
+
+   Every colour lives in a token here so the dark theme is a single palette
+   swap driven by prefers-color-scheme — see the media query below. Dark keeps
+   the warmth: the paper ground becomes a warm near-black rather than a grey,
+   and the washes become deep tints of their accent instead of pale ones.
 --------------------------------------------------------------------------- */
 
 :root {
+  color-scheme: light dark;
+
   --cream: #fff6ea;
   --card: #ffffff;
   --card-tint: #fffcf7;
@@ -17,11 +24,13 @@
   --track: #f1e7d8;
   --dash: #e2d5c1;
   --locked: #a99c8b;
+  --neutral-wash: #f7efe3;
 
   --coral: #e1543c;
   --coral-deep: #b03d2a;
   --coral-text: #c6462f;
   --coral-wash: #fdede8;
+  --coral-line: #f3cfc5;
 
   --amber: #f2a93b;
   --amber-deep: #c98411;
@@ -29,13 +38,24 @@
   --amber-soft: #b58a3c;
   --amber-wash: #fef3e0;
   --amber-line: #f7dfb4;
+  --amber-dash: #e7be79;
 
   --green: #4e9a6b;
   --green-text: #2e6b48;
   --green-wash: #e9f4ed;
+  --green-line: #bee0cc;
 
   --indigo: #4a56b8;
   --indigo-wash: #eceefb;
+
+  /* Text that sits on a filled coral surface — white in both themes. */
+  --on-accent: #ffffff;
+
+  /* The chunky pressed lip under a word-bank tile, and the lift under the
+     sticky dock and the toast. */
+  --tile-shadow: #ede0cd;
+  --tile-used-text: #c9bca9;
+  --lift: rgba(43, 37, 33, 0.25);
 
   --serif: 'Source Serif 4', 'Iowan Old Style', Palatino, Georgia, serif;
   --sans: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -43,6 +63,52 @@
   --radius: 20px;
   --radius-lg: 26px;
   --radius-sm: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream: #191512;
+    --card: #231e19;
+    --card-tint: #2a241e;
+    --ink: #f2e9dd;
+    --soft: #a89a8a;
+    --line: #3a322a;
+    --line-soft: #302a23;
+    --track: #332c25;
+    --dash: #4a4036;
+    /* Stays dimmer than --soft so locked rows still recede, but light enough
+       to clear AA against both the page and card grounds. */
+    --locked: #93867a;
+    --neutral-wash: #2b251f;
+
+    /* The button face stays bright enough to carry white label text; the
+       pressed lip goes darker than the face so the 3D edge still reads. */
+    --coral: #e35a41;
+    --coral-deep: #8f3122;
+    --coral-text: #ff8f77;
+    --coral-wash: #3a231d;
+    --coral-line: #5c342b;
+
+    --amber: #eda43a;
+    --amber-deep: #f5bb5e;
+    --amber-text: #e8b45f;
+    --amber-soft: #c49a5c;
+    --amber-wash: #33261a;
+    --amber-line: #4d3a22;
+    --amber-dash: #6b5227;
+
+    --green: #5aa878;
+    --green-text: #7fce9d;
+    --green-wash: #1e2f25;
+    --green-line: #2f5540;
+
+    --indigo: #9aa4f0;
+    --indigo-wash: #242847;
+
+    --tile-shadow: #14100d;
+    --tile-used-text: #6d6255;
+    --lift: rgba(0, 0, 0, 0.55);
+  }
 }
 
 * {
@@ -166,7 +232,7 @@ a:hover {
   padding: 18px;
   border-radius: 22px;
   background: var(--coral);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 800;
   font-size: 1.1rem;
   text-align: center;
@@ -216,7 +282,7 @@ a:hover {
   padding: 20px;
   border-radius: 24px;
   background: var(--coral);
-  color: #fff;
+  color: var(--on-accent);
   text-align: left;
   box-shadow: 0 5px 0 var(--coral-deep);
   transition: transform 120ms ease, box-shadow 120ms ease;
@@ -361,7 +427,7 @@ a:hover {
   font-family: var(--serif);
   font-size: 1.1rem;
   font-weight: 600;
-  box-shadow: 0 3px 0 #ede0cd;
+  box-shadow: 0 3px 0 var(--tile-shadow);
   transition: all 140ms ease;
 }
 
@@ -369,7 +435,7 @@ a:hover {
   border-style: dashed;
   border-color: var(--dash);
   background: transparent;
-  color: #c9bca9;
+  color: var(--tile-used-text);
   box-shadow: none;
   cursor: default;
 }
@@ -417,7 +483,7 @@ a:hover {
   padding: 2px 20px calc(env(safe-area-inset-bottom) + 14px);
   background: var(--cream);
   border-top: 1.5px solid var(--line);
-  box-shadow: 0 -10px 24px -14px rgba(43, 37, 33, 0.25);
+  box-shadow: 0 -10px 24px -14px var(--lift);
 }
 
 /*
@@ -474,7 +540,7 @@ a:hover {
 }
 
 .hint-neutral {
-  background: #f7efe3;
+  background: var(--neutral-wash);
   color: var(--soft);
 }
 
@@ -559,12 +625,12 @@ a:hover {
 
 .result-correct {
   background: var(--green-wash);
-  border: 1.5px solid #bee0cc;
+  border: 1.5px solid var(--green-line);
 }
 
 .result-incorrect {
   background: var(--coral-wash);
-  border: 1.5px solid #f3cfc5;
+  border: 1.5px solid var(--coral-line);
 }
 
 .result-headline {
@@ -628,7 +694,7 @@ a:hover {
   color: var(--cream);
   font-size: 0.9rem;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(43, 37, 33, 0.25);
+  box-shadow: 0 4px 16px var(--lift);
   animation: toast-in 240ms ease;
   z-index: 10;
 }
@@ -700,7 +766,7 @@ a:hover {
 
 .week-dot-pending {
   background: var(--card);
-  border: 1.5px dashed #e7be79;
+  border: 1.5px dashed var(--amber-dash);
 }
 
 /* --- Slots --------------------------------------------------------------- */
@@ -1169,7 +1235,7 @@ a:hover {
   font-family: var(--serif);
   font-size: 1.6rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--on-accent);
   margin-bottom: 18px;
 }
 

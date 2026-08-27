@@ -267,7 +267,7 @@ export default function Session() {
   const fullText = texts[exercise.verseId];
 
   return (
-    <main className="shell stack">
+    <main className="shell stack shell-full">
       {toast && <div className="toast" role="status">{toast}</div>}
 
       <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

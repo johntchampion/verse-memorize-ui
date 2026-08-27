@@ -344,8 +344,12 @@ a:hover {
 .word-bank {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 11px;
   margin-top: 12px;
+  /* TileExercise locks the height to exactly BANK_ROWS rows; tiles that
+     wrap past the last row are trimmed by measurement, never shown. */
+  overflow: hidden;
 }
 
 .tile {
@@ -382,6 +386,71 @@ a:hover {
   25% { transform: translateX(-5px); }
   50% { transform: translateX(5px); }
   75% { transform: translateX(-3px); }
+}
+
+/* A rolling-window tile popping in to fill a used tile's slot. */
+.tile-in {
+  animation: tile-in 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tile-in {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/*
+ * Sticky dock pinning the word bank (and hint) to the bottom of the viewport
+ * while a long verse scrolls above it. The negative margins bleed it across
+ * the shell's side padding and cancel the shell's bottom padding so the dock
+ * rests flush with the bottom edge at full scroll.
+ */
+.bank-dock {
+  position: sticky;
+  bottom: 0;
+  margin: 18px -20px calc(-1 * (env(safe-area-inset-bottom) + 32px));
+  padding: 2px 20px calc(env(safe-area-inset-bottom) + 14px);
+  background: var(--cream);
+  border-top: 1.5px solid var(--line);
+  box-shadow: 0 -10px 24px -14px rgba(43, 37, 33, 0.25);
+}
+
+/*
+ * The exercise fills the session viewport so the dock lands at the bottom of
+ * the screen even when the verse is short; margin-top: auto absorbs the free
+ * space (and collapses to nothing once the verse is long enough to scroll).
+ */
+.shell-full {
+  min-height: 100dvh;
+}
+
+.exercise-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.exercise-pane .verse-card {
+  margin-bottom: 18px;
+}
+
+.exercise-pane .bank-dock {
+  margin-top: auto;
+}
+
+.bank-dock .bank-label {
+  margin-top: 12px;
+}
+
+.bank-dock .hint {
+  margin-top: 14px;
+  /* Two lines of hint text, so the dock doesn't bounce as messages change. */
+  min-height: 66px;
 }
 
 /* --- Hint banner (session coaching) -------------------------------------- */

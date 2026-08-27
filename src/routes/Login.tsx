@@ -49,6 +49,7 @@ export default function Login() {
             id="email"
             type="email"
             autoComplete="email"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -60,6 +61,7 @@ export default function Login() {
             id="password"
             type="password"
             autoComplete="current-password"
+            placeholder="Your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -70,7 +72,7 @@ export default function Login() {
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <p className="small muted" style={{ marginTop: 20 }}>
+      <p className="small muted" style={{ fontWeight: 700, marginTop: 20 }}>
         New here? <Link to="/signup">Create an account</Link>
       </p>
     </main>

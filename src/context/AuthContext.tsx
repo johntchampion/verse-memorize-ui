@@ -35,10 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession({ token: res.token, userId: res.userId });
   }, []);
 
-  const signup = useCallback(async (email: string, password: string) => {
-    // The server computes day boundaries from this; the browser knows it best.
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    const res = await api.signup(email, password, timezone);
+  const signup = useCallback(async (email: string, password: string, timezone?: string) => {
+    // The server computes day boundaries from this; the browser knows it
+    // best, unless the user picked one themselves (onboarding does).
+    const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const res = await api.signup(email, password, tz);
     storeSession(res.token, res.userId);
     setSession({ token: res.token, userId: res.userId });
   }, []);

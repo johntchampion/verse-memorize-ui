@@ -4,7 +4,7 @@ export interface AuthState {
   token: string | null;
   userId: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, timezone?: string) => Promise<void>;
   logout: () => void;
 }
 

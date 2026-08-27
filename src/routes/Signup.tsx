@@ -49,6 +49,7 @@ export default function Signup() {
             id="email"
             type="email"
             autoComplete="email"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -60,18 +61,18 @@ export default function Signup() {
             id="password"
             type="password"
             autoComplete="new-password"
+            placeholder="At least 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <span className="small muted">At least 8 characters.</span>
         </div>
         {error && <p className="error-text" role="alert">{error}</p>}
         <button className="btn" type="submit" disabled={submitting}>
           {submitting ? 'Creating account…' : 'Create account'}
         </button>
       </form>
-      <p className="small muted" style={{ marginTop: 20 }}>
+      <p className="small muted" style={{ fontWeight: 700, marginTop: 20 }}>
         Already practicing? <Link to="/login">Sign in</Link>
       </p>
     </main>

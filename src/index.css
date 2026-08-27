@@ -63,6 +63,12 @@
   --radius: 20px;
   --radius-lg: 26px;
   --radius-sm: 16px;
+
+  /* Distance from the bottom-most content on a full-height screen (almost
+     always a button) to the bottom of the viewport, clear of the home
+     indicator on notched devices. Every screen that anchors content to the
+     bottom edge should resolve to this same total via .screen-bottom-gap. */
+  --screen-bottom-gap: 32px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -153,10 +159,23 @@ a:hover {
 
 /* --- App shell ---------------------------------------------------------- */
 
+/*
+ * The shared bottom-of-screen offset. Apply to whatever sits last on a
+ * full-height screen — almost always a button — so it lands the same
+ * distance from the viewport edge everywhere, safe-area included. Screens
+ * that need this as part of a larger padding shorthand (the shell, auth,
+ * onboarding and complete-screen containers) reference --screen-bottom-gap
+ * directly instead of duplicating this class.
+ */
+.screen-bottom-gap {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
+}
+
 .shell {
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 32px);
+  padding: calc(env(safe-area-inset-top) + 24px) 20px
+    calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
 }
 
 .screen-header {
@@ -479,8 +498,8 @@ a:hover {
 .bank-dock {
   position: sticky;
   bottom: 0;
-  margin: 18px -20px calc(-1 * (env(safe-area-inset-bottom) + 32px));
-  padding: 2px 20px calc(env(safe-area-inset-bottom) + 14px);
+  margin: 18px -20px calc(-1 * (env(safe-area-inset-bottom) + var(--screen-bottom-gap)));
+  padding: 2px 20px calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
   background: var(--cream);
   border-top: 1.5px solid var(--line);
   box-shadow: 0 -10px 24px -14px var(--lift);
@@ -710,63 +729,210 @@ a:hover {
   }
 }
 
-/* --- Streak card & week dots --------------------------------------------- */
+/* --- Bottom tab bar (Today / Practicing / All) ---------------------------- */
 
-.streak-card {
+/* Room for the fixed tab bar below the scrolling content. */
+.shell-tabbed {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+}
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--cream);
+  border-top: 1.5px solid var(--track);
+  z-index: 5;
+}
+
+.tab-bar-inner {
+  max-width: 480px;
+  margin: 0 auto;
   display: flex;
+  padding: 4px 8px calc(env(safe-area-inset-bottom) + 14px);
+}
+
+.tab,
+.tab:hover {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 3px;
+  padding: 9px 0 4px;
+  color: var(--locked);
+  transition: color 160ms ease;
+}
+
+.tab-active,
+.tab-active:hover {
+  color: var(--coral-text);
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 52px;
+  text-align: center;
+  border-radius: 12px;
+  padding: 5px 0;
+  transition: background 160ms ease;
+}
+
+.tab-active .tab-icon {
+  background: var(--coral-wash);
+}
+
+.tab-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+/* Headings for the Practicing and All tabs. */
+
+.view-title {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.view-sub {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--soft);
+  margin-top: 5px;
+}
+
+/* --- Today tab: streak hero ----------------------------------------------- */
+
+.today-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.today-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+  padding: 24px 0 16px;
+}
+
+.streak-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.streak-hero-circle {
+  width: 172px;
+  height: 172px;
+  border-radius: 50%;
+  background: var(--amber-wash);
+  border: 8px solid var(--amber);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: bob 4s ease-in-out infinite;
+}
+
+.streak-hero-count {
+  font-family: var(--serif);
+  font-size: 4.1rem;
+  font-weight: 700;
+  color: var(--amber-deep);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.streak-hero-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber-soft);
+  margin-top: 4px;
+}
+
+.today-copy {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--soft);
+  margin-top: 14px;
+}
+
+.today-aside {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--locked);
+  margin-top: 14px;
+}
+
+/* The Today tab's CTA — bigger, centered, no arrow. */
+.cta-center {
+  padding: 22px;
+  border-radius: 26px;
+  text-align: center;
+}
+
+.cta-center .cta-title {
+  font-size: 1.45rem;
+}
+
+.cta-center .cta-sub {
+  margin-top: 3px;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* --- Practicing tab: review-due card -------------------------------------- */
+
+.due-card {
+  margin-top: 22px;
+  padding: 17px 19px;
   background: var(--amber-wash);
   border: 1.5px solid var(--amber-line);
   border-radius: 22px;
 }
 
-.streak-circle {
-  width: 62px;
-  height: 62px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--card);
-  border: 3px solid var(--amber);
-  display: grid;
-  place-items: center;
-}
-
-.streak-circle-count {
-  font-family: var(--serif);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--amber-deep);
-  line-height: 1;
-}
-
-.streak-label {
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: var(--amber-text);
-}
-
-.week-dots {
+.due-row {
   display: flex;
-  gap: 5px;
+  align-items: baseline;
+  gap: 9px;
   margin-top: 8px;
 }
 
-.week-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 7px;
-  background: var(--track);
+.due-count {
+  font-family: var(--serif);
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--amber-text);
+  line-height: 1;
 }
 
-.week-dot-filled {
-  background: var(--amber);
+.due-what {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--amber-text);
 }
 
-.week-dot-pending {
-  background: var(--card);
-  border: 1.5px dashed var(--amber-dash);
+.due-copy {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--amber-soft);
+  margin-top: 7px;
+  line-height: 1.45;
 }
 
 /* --- Slots --------------------------------------------------------------- */
@@ -896,6 +1062,11 @@ a:hover {
   color: var(--green-text);
 }
 
+.chip-practice {
+  background: var(--amber-wash);
+  color: var(--amber-text);
+}
+
 .chip-locked {
   background: transparent;
   border: 1.5px solid var(--line);
@@ -916,71 +1087,76 @@ a:hover {
   padding: 5px 12px;
 }
 
-/* --- Verse bank ----------------------------------------------------------- */
+/* --- All tab: the hundred -------------------------------------------------- */
 
-.kept-grid {
+.hundred-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
+  height: 10px;
+  border-radius: 99px;
+  background: var(--track);
+  overflow: hidden;
   margin-top: 10px;
 }
 
-.kept-cell {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  background: var(--track);
-}
+.hundred-bar-kept { background: var(--green); }
+.hundred-bar-practicing { background: var(--amber); }
 
-.kept-mastered { background: var(--green); }
-.kept-review { background: var(--amber); }
-.kept-active { background: var(--coral); }
-
-.book-heading {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--locked);
-  margin: 22px 0 8px;
-}
-
-.verse-list {
+.arc-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  margin-top: 8px;
 }
 
-.verse-row {
+.arc-row {
+  display: flex;
+  gap: 12px;
+  padding: 15px 2px;
+  border-bottom: 1px solid var(--track);
+}
+
+.arc-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  margin-top: 7px;
+  background: var(--dash);
+}
+
+.arc-dot-kept { background: var(--green); }
+.arc-dot-practicing { background: var(--amber); }
+.arc-dot-decayed { background: var(--coral); }
+
+.arc-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.arc-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 13px 16px;
-  background: var(--card);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-sm);
-  text-align: left;
-  color: var(--ink);
+  gap: 9px;
 }
 
-.verse-row-reference {
+.arc-ref {
   font-family: var(--serif);
   font-size: 1rem;
   font-weight: 700;
 }
 
-.verse-row-locked {
-  background: transparent;
-  border: 1.5px dashed var(--dash);
+.arc-row-locked .arc-ref {
   color: var(--locked);
-  cursor: default;
 }
 
-.verse-row-locked .verse-row-reference {
+.arc-snippet {
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  line-height: 1.45;
   color: var(--locked);
-  font-weight: 600;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --- Strength & history --------------------------------------------------- */
@@ -1081,7 +1257,8 @@ a:hover {
   text-align: center;
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + 32px);
+  padding: calc(env(safe-area-inset-top) + 32px) 24px
+    calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
 }
 
 .complete-circle {
@@ -1220,7 +1397,8 @@ a:hover {
   max-width: 400px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 40px 26px;
+  padding: calc(env(safe-area-inset-top) + 40px) 26px
+    calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1255,7 +1433,8 @@ a:hover {
   max-width: 480px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 40px) 26px calc(env(safe-area-inset-bottom) + 32px);
+  padding: calc(env(safe-area-inset-top) + 40px) 26px
+    calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
   display: flex;
   flex-direction: column;
   justify-content: center;

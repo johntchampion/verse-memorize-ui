@@ -34,7 +34,7 @@ export default function VerseDetail() {
       <main className="shell stack">
         <p className="error-text">{error ?? 'Something went wrong.'}</p>
         <button className="btn-ghost" onClick={refetch}>Try again</button>
-        <Link to="/verses" className="btn-ghost">Back to verse bank</Link>
+        <Link to="/all" className="btn-ghost">Back to verses</Link>
       </main>
     );
   }
@@ -47,7 +47,7 @@ export default function VerseDetail() {
   return (
     <main className="shell stack">
       <header className="screen-header" style={{ marginBottom: 0 }}>
-        <Link to="/verses" className="icon-btn" aria-label="Back to verses">
+        <Link to="/all" className="icon-btn" aria-label="Back to verses">
           ←
         </Link>
         <span className="small muted" style={{ fontWeight: 800 }}>

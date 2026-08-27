@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#fbf9f4"/>
+  <!-- open book -->
+  <g stroke="#1c2432" stroke-width="14" stroke-linejoin="round" stroke-linecap="round" fill="#ffffff">
+    <path d="M256 168 C 220 140, 130 136, 96 152 L 96 348 C 130 332, 220 336, 256 364 Z"/>
+    <path d="M256 168 C 292 140, 382 136, 416 152 L 416 348 C 382 332, 292 336, 256 364 Z"/>
+  </g>
+  <!-- text lines -->
+  <g stroke="#9b8d76" stroke-width="10" stroke-linecap="round">
+    <path d="M132 200 L 220 194"/>
+    <path d="M132 240 L 220 234"/>
+    <path d="M132 280 L 220 274"/>
+    <path d="M292 194 L 380 200"/>
+    <path d="M292 234 L 380 240"/>
+    <path d="M292 274 L 380 280"/>
+  </g>
+  <!-- ribbon bookmark in red-letter carmine -->
+  <path d="M312 60 L 368 60 L 368 208 L 340 184 L 312 208 Z" fill="#9b1b1e"/>
+</svg>

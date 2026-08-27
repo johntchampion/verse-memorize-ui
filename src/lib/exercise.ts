@@ -25,8 +25,6 @@ export interface BlankSegment {
   kind: 'blank';
   /** Punctuation before the word, e.g. the quote in `"Do`. */
   punctBefore: string;
-  /** First letter revealed at the learning_heavy tier; '' otherwise. */
-  shownLetter: string;
   /** The hidden remainder of the word — sizes the rendered gap. */
   hidden: string;
   /** Punctuation after the word, e.g. the comma in `anything,`. */
@@ -61,13 +59,11 @@ export function parseExercise(blankedText: string, fullText: string): ExerciseSe
 
     const answer = match[0];
     const punctBefore = fullRaw.slice(0, match.index);
-    const shownLetter = token.slice(punctBefore.length, blankAt);
 
     return {
       kind: 'blank',
       punctBefore,
-      shownLetter,
-      hidden: answer.slice(shownLetter.length),
+      hidden: answer,
       punctAfter: fullRaw.slice(match.index + answer.length),
       answer,
       filledRaw: fullRaw,

@@ -8,30 +8,16 @@ interface Props {
   onComplete: (correct: boolean) => void;
 }
 
-/** "The Lord is my shepherd" → "T L i m s" — a nudge, not the answer. */
-function firstLetters(text: string): string {
-  return text
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((token) => {
-      const match = /[\p{L}\p{N}]/u.exec(token);
-      return match ? token.slice(0, match.index + 1) : token;
-    })
-    .join(' ');
-}
-
 type Result = 'correct' | 'incorrect' | 'shown' | null;
 
 /**
  * Typed exercise: full recall into one free-text input, validated only on
  * "Check". Case, punctuation and spacing are forgiven; the words must all be
- * there, in order. When stuck, a peek at first letters keeps the attempt
- * honest, while "Show the verse" trades the attempt for a re-read — recorded
- * as a miss, but gentler than guessing blind.
+ * there, in order. "Show the verse" trades the attempt for a re-read —
+ * recorded as a miss, but gentler than guessing blind.
  */
 export default function TypedExercise({ exercise, fullText, onComplete }: Props) {
   const [value, setValue] = useState('');
-  const [peeked, setPeeked] = useState(false);
   const [result, setResult] = useState<Result>(null);
 
   function check() {
@@ -71,13 +57,9 @@ export default function TypedExercise({ exercise, fullText, onComplete }: Props)
           spellCheck={false}
           aria-label={`Type ${exercise.reference} from memory`}
         />
-        {peeked && result === null && <p className="first-letters">{firstLetters(fullText)}</p>}
         {result === null && (
           <div className="peek-row">
             <span className="peek-label">Stuck?</span>
-            <button type="button" className="peek-btn" onClick={() => setPeeked(true)} disabled={peeked}>
-              Peek at first letters
-            </button>
             <button type="button" className="peek-btn" onClick={() => setResult('shown')}>
               Show the verse
             </button>

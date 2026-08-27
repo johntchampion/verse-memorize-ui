@@ -267,9 +267,6 @@ export default function TileExercise({
               <span key={i}>
                 {space}
                 {segment.punctBefore}
-                {segment.shownLetter && (
-                  <span className='blank-prefix'>{segment.shownLetter}</span>
-                )}
                 <span
                   ref={current ? currentBlankRef : undefined}
                   className={current ? 'blank blank-current' : 'blank'}

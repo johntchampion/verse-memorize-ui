@@ -101,7 +101,6 @@ function TasterStep({ onDone }: { onDone: () => void }) {
   const [filled, setFilled] = useState(0)
   const [used, setUsed] = useState<ReadonlySet<number>>(new Set())
   const [wrongTile, setWrongTile] = useState<number | null>(null)
-  const [misses, setMisses] = useState(0)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
@@ -118,41 +117,10 @@ function TasterStep({ onDone }: { onDone: () => void }) {
       setWrongTile(null)
       setFilled((n) => n + 1)
     } else {
-      setMisses((m) => m + 1)
       setWrongTile(i)
       timers.current.push(setTimeout(() => setWrongTile(null), WRONG_FLASH_MS))
     }
   }
-
-  const hint = done
-    ? misses === 0
-      ? {
-          className: 'hint hint-good',
-          icon: '🎉',
-          text: 'First try. You knew it already.',
-        }
-      : {
-          className: 'hint hint-good',
-          icon: '✓',
-          text: 'There it is — the whole verse.',
-        }
-    : filled > 0
-      ? {
-          className: 'hint hint-combo',
-          icon: '👏',
-          text: 'One more word to go.',
-        }
-      : wrongTile !== null
-        ? {
-            className: 'hint hint-bad',
-            icon: '↺',
-            text: 'Not that one — read the line again.',
-          }
-        : {
-            className: 'hint hint-neutral',
-            icon: '👆',
-            text: 'Tap the two words that belong in the gaps.',
-          }
 
   return (
     <main
@@ -201,12 +169,6 @@ function TasterStep({ onDone }: { onDone: () => void }) {
       </div>
 
       <div style={{ marginTop: 'auto' }}>
-        <div className={hint.className} role='status'>
-          <span className='hint-icon' aria-hidden='true'>
-            {hint.icon}
-          </span>
-          <span>{hint.text}</span>
-        </div>
         <button
           className='btn'
           style={{ marginTop: 12 }}

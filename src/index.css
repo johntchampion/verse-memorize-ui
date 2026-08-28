@@ -1237,7 +1237,6 @@ a:hover {
 
 .complete-screen {
   min-height: 100dvh;
-  background: var(--amber-wash);
   display: flex;
   flex-direction: column;
   justify-content: center;

@@ -1,7 +1,10 @@
 /**
  * Mirrors the response shapes of verse-memorize-api. Snake_case fields come
- * straight from database rows the API returns verbatim (user_verse, attempt,
- * review_schedule); camelCase fields are API-composed.
+ * straight from database rows the API returns verbatim (user_verse, attempt);
+ * camelCase fields are API-composed.
+ *
+ * The progression model itself is specified in the API's README — this file
+ * only mirrors its wire format.
  */
 
 export type Stage =
@@ -9,30 +12,51 @@ export type Stage =
   | 'learning_medium'
   | 'learning_heavy'
   | 'review'
-  | 'mastered'
-  | 'decayed';
+  | 'mastered';
 
 export type ExerciseType = 'tile_fill_blank' | 'type_fill_blank';
 
 export type VerseStatus = 'locked' | 'active' | 'review' | 'mastered';
 
+/**
+ * A `user_verse` row, returned verbatim. It holds both the learning-tier state
+ * and the review schedule — a verse is only ever in one regime at a time, so
+ * there is no separate schedule row.
+ */
 export interface UserVerse {
   id: string;
   user_id: string;
   verse_id: string;
   stage: Stage;
-  strength: number;
-  correct_streak_in_tier: number;
+  /** Zeroed by any wrong answer. In a learning tier the run must also land
+      inside one calendar day — see `streak_date`. */
+  consecutive_correct: number;
+  /** Zeroed by any correct answer. May span days. */
+  consecutive_incorrect: number;
+  /** Local date `consecutive_correct` was accrued on; learning stages only. */
+  streak_date: string | null;
+  /** review/mastered only; null in a learning slot or while queued. */
+  interval_days: number | null;
+  /** Local date (YYYY-MM-DD); null = not scheduled. */
+  due_at: string | null;
+  /** Local dates capping tier changes at one per day, either direction. */
+  last_upgrade_date: string | null;
+  last_downgrade_date: string | null;
+  /** 1 = pulled out of review, waiting for a learning slot to free up. */
+  needs_relearning: 0 | 1;
+  relearning_queued_at: string | null;
+  /** 1, 2 or 3 while in an active learning slot; null once graduated. */
   slot: number | null;
   activated_at: string;
+  /** Graduation is an event stamped here, not a stage of its own. */
   graduated_at: string | null;
 }
 
-export interface ReviewSchedule {
-  id: string;
-  user_verse_id: string;
-  due_at: string;
-  interval_days: number;
+/** Scheduling for a verse in review, composed by GET /api/verses/:id. */
+export interface VerseSchedule {
+  /** Local date (YYYY-MM-DD). */
+  dueAt: string;
+  intervalDays: number | null;
 }
 
 export interface Attempt {
@@ -56,7 +80,14 @@ export interface SlotVerse {
   verseId: string;
   reference: string | null;
   stage: Stage;
-  correctStreakInTier: number;
+  consecutiveCorrect: number;
+  consecutiveIncorrect: number;
+  /** Local date the correct-run was accrued on; a run from an earlier day no
+      longer counts toward advancing. */
+  streakDate: string | null;
+  /** This verse already changed tier today, so it can't change again until
+      tomorrow. */
+  tierChangeUsedToday: boolean;
 }
 
 export interface MeResponse {
@@ -97,8 +128,10 @@ export interface SessionTodayResponse {
 // POST /api/attempt
 export interface AttemptOutcome {
   userVerse: UserVerse;
-  schedule: ReviewSchedule | null;
+  /** True when this attempt graduated the verse out of learning_heavy. */
   graduated: boolean;
+  /** Rows slotted by the refill this attempt triggered. A row with a
+      `graduated_at` is a verse returning to practice, not a new one. */
   slotsFilled: UserVerse[];
 }
 
@@ -116,8 +149,9 @@ export interface VerseListItem {
   order: number;
   status: VerseStatus;
   stage: Stage | null;
-  decayed: boolean;
-  strength: number;
+  /** Pulled out of review and parked until a slot opens. Such a verse still
+      reports `status: 'review'`, so this has to be checked alongside it. */
+  needsRelearning: boolean;
   slot: number | null;
   graduatedAt: string | null;
   /** null while the verse is locked — the API withholds the text. */
@@ -139,7 +173,7 @@ export interface VerseDetailResponse {
   status: VerseStatus;
   graduatedAt: string | null;
   userVerse: UserVerse | null;
-  schedule: ReviewSchedule | null;
+  schedule: VerseSchedule | null;
   history: {
     attempts: Attempt[];
     total: number;

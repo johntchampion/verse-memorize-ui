@@ -1,6 +1,15 @@
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { STAGE_LABELS } from '../lib/exercise';
+import type { UserVerse } from '../api/types';
+import StageLadder from '../components/StageLadder';
+import {
+  REVIEW_ADVANCE_THRESHOLD,
+  REVIEW_DEMOTION_THRESHOLD,
+  STAGE_LABELS,
+  TIER_ADVANCE_THRESHOLD,
+  TIER_DOWNGRADE_THRESHOLD,
+  isLearningStage,
+} from '../lib/exercise';
 import { useApi } from '../hooks/useApi';
 
 const RECENT_ATTEMPTS_SHOWN = 10;
@@ -15,6 +24,48 @@ function formatDate(iso: string): string {
 
 function formatDay(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function chipClass(userVerse: UserVerse): string {
+  if (userVerse.needs_relearning === 1) return 'chip chip-relearn';
+  if (userVerse.stage === 'mastered') return 'chip chip-mastered';
+  if (userVerse.stage === 'review') return 'chip chip-review';
+  return 'chip chip-active';
+}
+
+/**
+ * What this verse needs next, in the terms the state machine actually uses:
+ * consecutive-answer runs, not a score.
+ */
+function progressCopy(userVerse: UserVerse): string {
+  const { consecutive_correct: right, consecutive_incorrect: wrong } = userVerse;
+
+  if (userVerse.needs_relearning === 1) {
+    return 'Missed twice in review, so it comes back to heavy blanks as soon as a slot opens.';
+  }
+
+  if (isLearningStage(userVerse.stage)) {
+    // The advancing run has to fit inside one calendar day, so a run from an
+    // earlier day is already dead as far as the server is concerned.
+    const live = userVerse.streak_date !== null;
+    if (wrong > 0) {
+      const left = TIER_DOWNGRADE_THRESHOLD - wrong;
+      return `${wrong} missed in a row — ${left} more drops it a tier. Three right in one day moves it up.`;
+    }
+    return live
+      ? `${right} of ${TIER_ADVANCE_THRESHOLD} right in a row today. All three in one day moves it up a tier.`
+      : `Three right in a row within one day moves it up a tier — the run resets each morning.`;
+  }
+
+  if (userVerse.stage === 'mastered') {
+    return 'Fully memorized, at the top of the ladder. It still comes back every 30 days; one miss sends it to review.';
+  }
+
+  if (wrong > 0) {
+    const left = REVIEW_DEMOTION_THRESHOLD - wrong;
+    return `${wrong} failed review — ${left} more and it returns to practice at heavy blanks.`;
+  }
+  return `${right} of ${REVIEW_ADVANCE_THRESHOLD} correct reviews toward the next, longer interval.`;
 }
 
 export default function VerseDetail() {
@@ -40,6 +91,7 @@ export default function VerseDetail() {
   }
 
   const { verse, status, userVerse, schedule, history, graduatedAt } = data;
+  const parked = userVerse?.needs_relearning === 1;
   const recent = history.attempts.slice(0, RECENT_ATTEMPTS_SHOWN);
   // Attempts arrive newest first; the block strip reads oldest → newest.
   const blocks = [...recent].reverse();
@@ -68,34 +120,42 @@ export default function VerseDetail() {
         <section className="card" aria-label="Progress">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span className="eyebrow">Progress</span>
-            <span className={graduatedAt ? 'chip chip-mastered' : 'chip chip-active'}>
-              {STAGE_LABELS[userVerse.stage]}
+            <span className={chipClass(userVerse)}>
+              {parked ? 'Relearning' : STAGE_LABELS[userVerse.stage]}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
-            <span className="strength-number">{userVerse.strength}</span>
-            <span className="small muted" style={{ fontWeight: 700 }}>
-              strength / 100
-            </span>
-          </div>
-          <div className="strength-track" style={{ marginTop: 10 }}>
-            <div className="strength-fill" style={{ width: `${userVerse.strength}%` }} />
-          </div>
-          {(schedule || graduatedAt) && status !== 'locked' && (
+          <StageLadder stage={userVerse.stage} />
+
+          <p className="small muted" style={{ fontWeight: 600, marginTop: 12, lineHeight: 1.45 }}>
+            {progressCopy(userVerse)}
+          </p>
+
+          {(schedule || graduatedAt || parked) && status !== 'locked' && (
             <div className="stat-tiles" style={{ marginTop: 14 }}>
-              {schedule && (
-                <>
-                  <div className="stat-tile">
-                    <div className="stat-tile-value">{formatDay(`${schedule.due_at}T00:00:00`)}</div>
-                    <div className="stat-tile-label">next review</div>
-                  </div>
-                  <div className="stat-tile">
-                    <div className="stat-tile-value">
-                      Every {schedule.interval_days} {schedule.interval_days === 1 ? 'day' : 'days'}
+              {parked ? (
+                // Queued for relearning: unscheduled by design, so there is no
+                // next-review date to show until a slot picks it up.
+                <div className="stat-tile">
+                  <div className="stat-tile-value">Waiting</div>
+                  <div className="stat-tile-label">for a slot</div>
+                </div>
+              ) : (
+                schedule && (
+                  <>
+                    <div className="stat-tile">
+                      <div className="stat-tile-value">{formatDay(`${schedule.dueAt}T00:00:00`)}</div>
+                      <div className="stat-tile-label">next review</div>
                     </div>
-                    <div className="stat-tile-label">interval</div>
-                  </div>
-                </>
+                    {schedule.intervalDays !== null && (
+                      <div className="stat-tile">
+                        <div className="stat-tile-value">
+                          Every {schedule.intervalDays} {schedule.intervalDays === 1 ? 'day' : 'days'}
+                        </div>
+                        <div className="stat-tile-label">interval</div>
+                      </div>
+                    )}
+                  </>
+                )
               )}
               {graduatedAt && (
                 <div className="stat-tile">

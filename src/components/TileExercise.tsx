@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { SessionExercise } from '../api/types'
 import {
   STAGE_LABELS,
+  missTolerance,
   parseExercise,
   wordsMatch,
   type BlankSegment,
@@ -75,8 +76,13 @@ function refill(
  * Banks that fit entirely keep the classic behavior — used tiles hollow out in
  * place. Long verses auto-scroll to keep the current blank in view above the
  * dock. Once every blank is filled, the Next button at the bottom of the dock
- * activates — correctness per-tap is already known, so "correct" means a
- * clean run with zero wrong taps.
+ * activates.
+ *
+ * Correctness per-tap is already known, so the attempt is graded on the number
+ * of wrong taps — forgiving a slip per `missTolerance` blanks. A review blanks
+ * every word, so without that a single mistap on a 75-word verse would count
+ * the same as one on a 4-blank learning exercise, and two of those demote the
+ * verse out of review entirely.
  */
 export default function TileExercise({
   exercise,
@@ -187,6 +193,8 @@ export default function TileExercise({
   }, [filledCount])
 
   const complete = filledCount >= blanks.length
+  const slips = missTolerance(blanks.length)
+  const slipsLeft = Math.max(0, slips - misses)
 
   function tapTile(pos: number, bankIdx: number, word: string) {
     if (complete || usedTiles.has(bankIdx)) return
@@ -233,10 +241,22 @@ export default function TileExercise({
             ? 'Review'
             : STAGE_LABELS[exercise.stage]}
         </span>
-        <span className='chip chip-streak'>
-          {combo >= 2
-            ? `🔥 ${combo} in a row`
-            : `${filledCount} of ${blanks.length} blanks`}
+        <span
+          className={
+            misses > 0 && slipsLeft === 0
+              ? 'chip chip-relearn'
+              : 'chip chip-streak'
+          }
+        >
+          {/* Once a slip is spent, the budget matters more than the combo —
+              showing it is the only way the forgiveness is legible. */}
+          {misses > 0 && slips > 0
+            ? slipsLeft === 1
+              ? '1 slip left'
+              : `${slipsLeft} slips left`
+            : combo >= 2
+              ? `🔥 ${combo} in a row`
+              : `${filledCount} of ${blanks.length} blanks`}
         </span>
       </div>
 
@@ -319,7 +339,7 @@ export default function TileExercise({
           className='btn'
           style={{ marginTop: 20 }}
           disabled={!complete}
-          onClick={() => onComplete(misses === 0)}
+          onClick={() => onComplete(misses <= slips)}
         >
           Next verse →
         </button>

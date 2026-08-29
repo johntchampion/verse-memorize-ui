@@ -1,115 +1,141 @@
-import { Link } from 'react-router-dom';
-import { api } from '../api/client';
-import type { VerseListItem } from '../api/types';
-import TabBar from '../components/TabBar';
-import { useApi } from '../hooks/useApi';
+import { Link } from 'react-router-dom'
+import { api } from '../api/client'
+import type { VerseListItem } from '../api/types'
+import TabBar from '../components/TabBar'
+import { useApi } from '../hooks/useApi'
 
-/** A verse is "kept" once it has graduated out of the learning slots. */
-function isKept(verse: VerseListItem): boolean {
-  return verse.status === 'review' || verse.status === 'mastered';
+/**
+ * A verse is "memorized" once it has graduated out of the learning slots —
+ * but not while it's queued for relearning. Such a verse still reports
+ * `status: 'review'` (status is derived from `stage`, which doesn't change
+ * while it's parked), so it would otherwise be counted as memorized while
+ * actually being on its way back into practice.
+ */
+function isMemorized(verse: VerseListItem): boolean {
+  if (verse.needsRelearning) return false
+  return verse.status === 'review' || verse.status === 'mastered'
 }
 
 function dotClass(verse: VerseListItem): string {
-  if (verse.decayed) return 'arc-dot arc-dot-decayed';
-  if (isKept(verse)) return 'arc-dot arc-dot-kept';
-  if (verse.status === 'active') return 'arc-dot arc-dot-practicing';
-  return 'arc-dot';
+  if (verse.needsRelearning) return 'arc-dot arc-dot-relearn'
+  if (isMemorized(verse)) return 'arc-dot arc-dot-memorized'
+  if (verse.status === 'active') return 'arc-dot arc-dot-practicing'
+  return 'arc-dot'
 }
 
 function StatusChip({ verse }: { verse: VerseListItem }) {
-  if (verse.decayed) return <span className="chip chip-decayed">Needs review</span>;
-  if (isKept(verse)) return <span className="chip chip-mastered">Kept</span>;
-  if (verse.status === 'active') return <span className="chip chip-practice">In practice</span>;
-  return null;
+  if (verse.needsRelearning)
+    return <span className='chip chip-relearn'>Relearning</span>
+  if (isMemorized(verse))
+    return <span className='chip chip-mastered'>Memorized</span>
+  if (verse.status === 'active')
+    return <span className='chip chip-practice'>In practice</span>
+  return null
 }
 
 /**
- * The All tab: every verse in the arc, in order — one flat list, kept ones
- * green, the rest waiting their turn.
+ * The All tab: every verse in the arc, in order — one flat list, memorized
+ * ones green, the rest waiting their turn.
  */
 export default function AllVerses() {
-  const { data, loading, error, refetch } = useApi(() => api.verses());
+  const { data, loading, error, refetch } = useApi(() => api.verses())
 
   if (loading) {
     return (
       <>
-        <main className="shell shell-tabbed">
-          <p className="muted">Loading…</p>
+        <main className='shell shell-tabbed'>
+          <p className='muted'>Loading…</p>
         </main>
         <TabBar />
       </>
-    );
+    )
   }
 
   if (error || !data) {
     return (
       <>
-        <main className="shell shell-tabbed stack">
-          <p className="error-text">{error ?? 'Something went wrong.'}</p>
-          <button className="btn-ghost" onClick={refetch}>
+        <main className='shell shell-tabbed stack'>
+          <p className='error-text'>{error ?? 'Something went wrong.'}</p>
+          <button className='btn-ghost' onClick={refetch}>
             Try again
           </button>
         </main>
         <TabBar />
       </>
-    );
+    )
   }
 
-  const total = data.verses.length;
-  const kept = data.verses.filter(isKept).length;
-  const practicing = data.verses.filter((v) => v.status === 'active').length;
+  const total = data.verses.length
+  const memorized = data.verses.filter(isMemorized).length
+  const practicing = data.verses.filter((v) => v.status === 'active').length
 
   return (
     <>
-      <main className="shell shell-tabbed">
-        <h1 className="view-title">The hundred</h1>
-        <p className="view-sub">Every verse in the arc, in order. Kept ones stay kept.</p>
+      <main className='shell shell-tabbed'>
+        <h1 className='view-title'>The Hundred</h1>
+        <p className='view-sub'>
+          Every verse in the curriculum, in canon order.
+        </p>
 
-        <div className="card" style={{ marginTop: 18, padding: '16px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div className='card' style={{ marginTop: 18, padding: '16px 18px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+            }}
+          >
             <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>
-              {kept} kept · {practicing} in practice
+              {memorized} memorized · {practicing} in practice
             </span>
-            <span className="small muted" style={{ fontWeight: 700 }}>
+            <span className='small muted' style={{ fontWeight: 700 }}>
               of {total}
             </span>
           </div>
-          <div className="hundred-bar" aria-hidden="true">
-            <span className="hundred-bar-kept" style={{ width: `${(kept / total) * 100}%` }} />
+          <div className='hundred-bar' aria-hidden='true'>
             <span
-              className="hundred-bar-practicing"
+              className='hundred-bar-memorized'
+              style={{ width: `${(memorized / total) * 100}%` }}
+            />
+            <span
+              className='hundred-bar-practicing'
               style={{ width: `${(practicing / total) * 100}%` }}
             />
           </div>
         </div>
 
-        <div className="arc-list">
+        <div className='arc-list'>
           {data.verses.map((verse) => {
             const inner = (
               <>
-                <span className={dotClass(verse)} aria-hidden="true" />
-                <div className="arc-main">
-                  <div className="arc-head">
-                    <span className="arc-ref">{verse.reference}</span>
+                <span className={dotClass(verse)} aria-hidden='true' />
+                <div className='arc-main'>
+                  <div className='arc-head'>
+                    <span className='arc-ref'>{verse.reference}</span>
                     <StatusChip verse={verse} />
                   </div>
-                  {verse.text && <p className="arc-snippet">{verse.text}</p>}
+                  {verse.text && <p className='arc-snippet'>{verse.text}</p>}
                 </div>
               </>
-            );
+            )
             return verse.status === 'locked' ? (
-              <div key={verse.id} className="arc-row arc-row-locked">
+              <div key={verse.id} className='arc-row arc-row-locked'>
                 {inner}
               </div>
             ) : (
-              <Link key={verse.id} to={`/verses/${verse.id}`} className="arc-row" style={{ color: 'inherit' }}>
+              <Link
+                key={verse.id}
+                to={`/verses/${verse.id}`}
+                className='arc-row'
+                style={{ color: 'inherit' }}
+              >
                 {inner}
               </Link>
-            );
+            )
           })}
         </div>
       </main>
       <TabBar />
     </>
-  );
+  )
 }

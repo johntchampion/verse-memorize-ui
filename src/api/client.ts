@@ -84,23 +84,30 @@ async function request<T>(
     )
   }
 
-  if (res.status === 401 && !path.startsWith('/auth')) {
+  const data: unknown = await res.json().catch(() => null)
+  const message =
+    data &&
+    typeof data === 'object' &&
+    'error' in data &&
+    typeof data.error === 'string'
+      ? data.error
+      : null
+
+  // A 401 means the token itself is invalid/expired. "user not found" means
+  // the token is still well-formed but the account behind it is gone (e.g.
+  // the user deleted their account) — both leave the client stuck with a
+  // dead session, so both are treated as a logout.
+  if (
+    !path.startsWith('/auth') &&
+    (res.status === 401 || message === 'user not found')
+  ) {
     clearSession()
     onUnauthorized?.()
     throw new ApiError(401, 'Your session has expired. Sign in again.')
   }
 
-  const data: unknown = await res.json().catch(() => null)
-
   if (!res.ok) {
-    const message =
-      data &&
-      typeof data === 'object' &&
-      'error' in data &&
-      typeof data.error === 'string'
-        ? data.error
-        : `Request failed (${res.status})`
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message ?? `Request failed (${res.status})`)
   }
 
   return data as T

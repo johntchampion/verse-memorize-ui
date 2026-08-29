@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { SessionExercise, Stage } from '../api/types'
+import type { AttemptOutcome, SessionExercise, Stage, UserVerse } from '../api/types'
 import ProgressBar from '../components/ProgressBar'
 import TileExercise from '../components/TileExercise'
 import TypedExercise from '../components/TypedExercise'
-import { STAGE_LABELS, stageChangeMessage } from '../lib/exercise'
+import { LEARNING_ORDER, STAGE_LABELS, stageChangeMessage } from '../lib/exercise'
 
 type Phase = 'loading' | 'empty' | 'running' | 'finishing' | 'done'
 
@@ -25,41 +25,100 @@ interface SessionEvent {
 
 const TOAST_MS = 2500
 
-/** Stage transitions that read as wins on the completion screen. */
-function celebrationEvent(
+/**
+ * Everything an attempt moved, worth recapping on the completion screen —
+ * losses as well as wins. A session that quietly dropped a verse a tier should
+ * say so; that's how the day-to-day rules become learnable.
+ */
+function attemptEvent(
   reference: string,
   from: Stage,
-  to: Stage,
+  outcome: AttemptOutcome,
 ): SessionEvent | null {
-  if (from === to) return null
-  if (to === 'learning_medium' || to === 'learning_heavy') {
+  const to = outcome.userVerse.stage
+
+  // Parked for relearning. The stage itself is unchanged when no slot was
+  // free, so this has to be checked before any stage comparison.
+  if (outcome.userVerse.needs_relearning === 1) {
     return {
-      icon: '↑',
+      icon: '↺',
+      iconBg: 'var(--coral-wash)',
+      title: reference,
+      detail: 'Slipped twice — waiting for a slot',
+      detailColor: 'var(--coral-text)',
+    }
+  }
+
+  // Demoted out of review straight into a free slot.
+  if (from === 'review' && to === 'learning_heavy') {
+    return {
+      icon: '↺',
+      iconBg: 'var(--coral-wash)',
+      title: reference,
+      detail: 'Back to practice at heavy blanks',
+      detailColor: 'var(--coral-text)',
+    }
+  }
+
+  if (from === to) return null
+
+  const fromTier = LEARNING_ORDER.indexOf(from)
+  const toTier = LEARNING_ORDER.indexOf(to)
+  if (fromTier !== -1 && toTier !== -1) {
+    const up = toTier > fromTier
+    return {
+      icon: up ? '↑' : '↓',
       iconBg: 'var(--coral-wash)',
       title: reference,
       detail: `${STAGE_LABELS[from]} → ${STAGE_LABELS[to]}`,
       detailColor: 'var(--coral-text)',
     }
   }
-  if (to === 'review' && from !== 'decayed') {
+
+  if (to === 'review') {
+    // From heavy this is graduation; otherwise it's mastery lost.
+    const graduated = from === 'learning_heavy'
     return {
-      icon: '✓',
-      iconBg: 'var(--green-wash)',
+      icon: graduated ? '✓' : '↓',
+      iconBg: graduated ? 'var(--green-wash)' : 'var(--coral-wash)',
       title: reference,
-      detail: 'Graduated — now in review',
-      detailColor: 'var(--green-text)',
+      detail: graduated ? 'Graduated — now in review' : 'Lost mastery — back in review',
+      detailColor: graduated ? 'var(--green-text)' : 'var(--coral-text)',
     }
   }
+
   if (to === 'mastered') {
     return {
       icon: '✓',
       iconBg: 'var(--green-wash)',
       title: reference,
-      detail: 'Mastered — well kept',
+      detail: 'Mastered — fully memorized',
       detailColor: 'var(--green-text)',
     }
   }
+
   return null
+}
+
+/**
+ * A slot that just filled. A row carrying a `graduated_at` has been through
+ * learning before — it's a verse coming back, not a new one arriving.
+ */
+function slotFilledEvent(row: UserVerse): SessionEvent {
+  const returning = row.graduated_at !== null
+  return {
+    icon: returning ? '↺' : '🔓',
+    iconBg: returning ? 'var(--coral-wash)' : 'var(--amber-wash)',
+    title: returning
+      ? 'A verse returns to practice'
+      : row.slot !== null
+        ? `Slot ${row.slot} unlocked`
+        : 'New verse unlocked',
+    detail: returning
+      ? 'Picked up the open slot at heavy blanks'
+      : 'A new verse joins your practice',
+    detailColor: returning ? 'var(--coral-text)' : 'var(--amber-soft)',
+  }
 }
 
 /**
@@ -132,19 +191,7 @@ export default function Session() {
     try {
       const result = await api.sessionComplete()
       if (result.slotsFilled.length > 0) {
-        setEvents((prev) => [
-          ...prev,
-          ...result.slotsFilled.map((uv) => ({
-            icon: '🔓',
-            iconBg: 'var(--amber-wash)',
-            title:
-              uv.slot !== null
-                ? `Slot ${uv.slot} unlocked`
-                : 'New verse unlocked',
-            detail: 'A new verse joins your practice',
-            detailColor: 'var(--amber-soft)',
-          })),
-        ])
+        setEvents((prev) => [...prev, ...result.slotsFilled.map(slotFilledEvent)])
       }
       let streak: number | null = null
       try {
@@ -176,17 +223,19 @@ export default function Session() {
         correct,
       )
       if (correct) setCorrectCount((n) => n + 1)
-      const message = stageChangeMessage(
-        exercise.stage,
-        outcome.userVerse.stage,
-      )
+      const message = stageChangeMessage(exercise.stage, outcome)
       if (message) setToast(message)
-      const event = celebrationEvent(
-        exercise.reference,
-        exercise.stage,
-        outcome.userVerse.stage,
-      )
-      if (event) setEvents((prev) => [...prev, event])
+      const event = attemptEvent(exercise.reference, exercise.stage, outcome)
+      // A graduation empties a slot and a demotion claims one, so an attempt
+      // can refill slots mid-session — not just session/complete. A demoted
+      // verse that landed straight back in a free slot is in both the outcome
+      // and this list, and `attemptEvent` already reported it.
+      const filled = outcome.slotsFilled
+        .filter((row) => row.id !== outcome.userVerse.id)
+        .map(slotFilledEvent)
+      if (event || filled.length > 0) {
+        setEvents((prev) => [...prev, ...(event ? [event] : []), ...filled])
+      }
       if (index + 1 < queue.length) {
         setIndex(index + 1)
       } else {

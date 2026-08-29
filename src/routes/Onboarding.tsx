@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProgressBar from '../components/ProgressBar'
+import StageLadder from '../components/StageLadder'
 import { useAuth } from '../context/auth'
 
 /**
@@ -356,30 +357,14 @@ export default function Onboarding() {
             <p className='eyebrow' style={{ color: 'var(--amber-soft)' }}>
               How each verse goes in
             </p>
-            <div
-              className='stage-pipeline'
-              aria-label='Light, then medium, then heavy, then typed'
-            >
-              <span className='stage-step stage-step-active'>Light</span>
-              <span className='stage-arrow' aria-hidden='true'>
-                ›
-              </span>
-              <span className='stage-step'>Medium</span>
-              <span className='stage-arrow' aria-hidden='true'>
-                ›
-              </span>
-              <span className='stage-step'>Heavy</span>
-              <span className='stage-arrow' aria-hidden='true'>
-                ›
-              </span>
-              <span className='stage-step'>Typed</span>
-            </div>
+            <StageLadder stage='learning_light' />
             <p
               className='small muted'
               style={{ fontWeight: 600, marginTop: 12, lineHeight: 1.45 }}
             >
-              Blanks grow as you get stronger, then the verse returns on a
-              schedule so it stays. Three verses at a time — never a pile.
+              Three right in a row moves a verse up and the blanks grow. Past
+              heavy it&rsquo;s memorized, and comes back on a widening schedule so it
+              stays. Three verses at a time — never a pile.
             </p>
           </div>
         </div>

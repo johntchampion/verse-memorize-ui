@@ -3,11 +3,16 @@
 A mobile-first, installable PWA for daily scripture memorization. Users work
 through a fixed bank of 100 verses, three at a time: new verses are drilled
 with fill-in-the-blank exercises at increasing blank density, then graduate
-into a spaced-repetition review schedule (typed full recall).
+into a spaced-repetition review schedule.
 
 This is the client only. It talks to **verse-memorize-api**, an Express +
 SQLite backend expected to live in a sibling directory
 (`../verse-memorize-api`) and to be running on port 3000.
+
+**The API's README is the spec for how progression works** — stages, streak
+thresholds, the interval ladder, the relearning queue. This app renders that
+model; it never decides a transition itself. See
+[Progression model](#progression-model) below for what the UI has to know.
 
 ## Stack
 
@@ -52,11 +57,12 @@ src/
                        refresh works)
   context/AuthContext.tsx
   hooks/useApi.ts      fetch-on-mount + loading/error + refetch
-  lib/exercise.ts      exercise parsing & answer derivation (see below)
-  routes/              one file per screen: Login, Signup, Home, Session,
-                       VerseBank, VerseDetail, Settings
-  components/          TileExercise, TypedExercise, SlotRow, StreakBadge,
-                       ProgressBar
+  lib/exercise.ts      exercise parsing, answer derivation, progression labels
+  lib/dates.ts         user-timezone day boundaries (mirrors the API's)
+  routes/              one file per screen: Onboarding, Login, Signup, Today,
+                       Practicing, AllVerses, Session, VerseDetail, Settings
+  components/          TileExercise, TypedExercise, SlotRow, StageLadder,
+                       TabBar, ProgressBar
   index.css            the whole design system (tokens + component classes)
 ```
 
@@ -79,22 +85,56 @@ backend tokenizer changes, `lib/exercise.ts` must change with it.**
 
 **Exercise semantics** (product decisions):
 
-- *Tile exercises* (`tile_fill_blank`, learning stages) validate on tap: a
-  correct tile fills the next blank and dims; a wrong tile shakes and changes
-  nothing. When all blanks are filled the attempt auto-submits. An attempt
-  counts as correct only if the run had **zero wrong taps**.
-- *Typed exercises* (`type_fill_blank`, review stages) validate only on
-  "Check": one free-text input compared against the full verse, forgiving
-  case, punctuation, and whitespace (`normalizeTypedText`).
+- *Tile exercises* (`tile_fill_blank`) cover the three learning tiers **and
+  `review`**, which blanks every word. They validate on tap: a correct tile
+  fills the next blank and dims; a wrong tile shakes and changes nothing. When
+  all blanks are filled the Next button activates.
+- Tile grading forgives **one wrong tap per 20 blanks** (`missTolerance` in
+  `lib/exercise.ts`). A full-density review on a long verse is 70+ taps, and two
+  missed reviews pull a verse out of review entirely — treating one slip there
+  the same as a slip on a 4-blank learning exercise made demotion far too easy.
+  Short exercises earn no slips, so learning grading is unchanged in practice.
+  The remaining budget is shown in the header chip once a slip is spent.
+- *Typed exercises* (`type_fill_blank`) are reached **only at `mastered`**. They
+  validate on "Check": one free-text input compared against the full verse,
+  forgiving case, punctuation, and whitespace (`normalizeTypedText`).
 - Session state (current index, taps so far) is purely local; only submitted
-  attempts hit the server. Stage changes returned by `/api/attempt` surface as
-  a brief toast. Queue exhaustion calls `POST /api/session/complete`.
+  attempts hit the server. Whatever `/api/attempt` reports surfaces as a brief
+  toast and as a line on the completion screen — downgrades and relearning
+  included, not just wins. Queue exhaustion calls `POST /api/session/complete`.
+- `POST /api/attempt` returns `slotsFilled` as well as `sessionComplete` does:
+  a graduation empties a slot and refills it mid-session. Both are rendered.
 
 There's a standalone cross-check script pattern worth reusing if you touch the
 parser: import the backend's `buildExercise` and this repo's `parseExercise`
 in one `tsx` script and assert that every stage/instance/verse combination
-aligns, that every blank's answer appears in the word bank, and that the
-`learning_heavy` shown-first-letter splits cleanly.
+aligns and that every blank's answer appears in the word bank. `review` is the
+case worth covering — it blanks every token, so alignment has the least slack
+there.
+
+## Progression model
+
+The rules live in the API; three of their consequences are easy to get wrong
+here.
+
+**A learning tier advances on 3 correct in a row *within one calendar day*.**
+`consecutive_correct` carries across days in the database but is dead for
+advancement once `streak_date` isn't today, so any "N / 3" the UI draws has to
+be gated on that date — see `SlotRow`. The day is the *user's*, from their
+profile timezone: `lib/dates.ts` mirrors the server's `todayInTimezone`, and
+comparing against the browser's own day would disagree for anyone travelling.
+
+**A verse can change tier at most once per day, either direction.** After that
+the extra correct answers are practice, and `/api/me` reports
+`tierChangeUsedToday` so the slot card can say so instead of showing a progress
+bar that can't fill.
+
+**A verse pulled out of review still reports `status: 'review'`.** Two failed
+reviews set `needsRelearning` and park the verse — no `due_at`, out of the
+session — until a slot frees up. Status is derived from `stage`, which doesn't
+change while it waits, so `needsRelearning` must be checked *alongside* status
+or a demoted verse counts as kept (`isKept` in `AllVerses`). There is no numeric
+strength score and no `decayed` stage; both were removed in the rewrite.
 
 ## Design system
 

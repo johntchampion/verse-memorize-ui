@@ -62,7 +62,7 @@ src/
   routes/              one file per screen: Onboarding, Login, Signup, Today,
                        Practicing, AllVerses, Session, VerseDetail, Settings
   components/          TileExercise, TypedExercise, SlotRow, StageLadder,
-                       TabBar, ProgressBar
+                       TabBar, ProgressBar, TranslationTag
   index.css            the whole design system (tokens + component classes)
 ```
 
@@ -70,6 +70,29 @@ Routes: `/login`, `/signup` are public; `/`, `/session`, `/verses`,
 `/verses/:id`, `/settings` are guarded (`RequireAuth` in `App.tsx`). The JWT is
 kept in `localStorage` so a home-screen relaunch stays signed in; an expired
 token or any 401 clears it and redirects to `/login`.
+
+## Translations
+
+Verse text is served in whichever translation the account prefers
+(`user.translation` on `GET /api/me`, changed with `PATCH /api/me`). Settings
+lists the choices from `GET /api/translations`, which is also the only source
+of translation names and licence text — everywhere else, the code alone is
+enough, because `GET /api/verses`, `GET /api/verses/:id` and
+`GET /api/session/today` each echo a top-level `translation` describing the
+text in that same response. `TranslationTag` renders that code beside the
+reference on every surface showing verse text, and the full licence appears
+once, under the picker in Settings.
+
+Reading the code off the response rather than off the profile is deliberate:
+it always credits the words actually on screen. The session runner leans on
+the same field — it refuses to start if `GET /api/session/today` and the
+per-verse text fetches disagree, since `parseExercise` aligns the two token by
+token and a mid-load preference change would otherwise crash it.
+
+Switching translations touches no progress: `user_verse.verse_id` is the same
+slug in every translation file, so a verse keeps its stage, streak and
+schedule across a change. Signup does not offer a choice; new accounts get the
+API's default and change it in Settings.
 
 ## Things to understand before changing the session runner
 
@@ -85,7 +108,7 @@ backend tokenizer changes, `lib/exercise.ts` must change with it.**
 
 **Exercise semantics** (product decisions):
 
-- *Tile exercises* (`tile_fill_blank`) cover the three learning tiers **and
+- _Tile exercises_ (`tile_fill_blank`) cover the three learning tiers **and
   `review`**, which blanks every word. They validate on tap: a correct tile
   fills the next blank and dims; a wrong tile shakes and changes nothing. When
   all blanks are filled the Next button activates.
@@ -95,7 +118,7 @@ backend tokenizer changes, `lib/exercise.ts` must change with it.**
   the same as a slip on a 4-blank learning exercise made demotion far too easy.
   Short exercises earn no slips, so learning grading is unchanged in practice.
   The remaining budget is shown in the header chip once a slip is spent.
-- *Typed exercises* (`type_fill_blank`) are reached **only at `mastered`**. They
+- _Typed exercises_ (`type_fill_blank`) are reached **only at `mastered`**. They
   validate on "Check": one free-text input compared against the full verse,
   forgiving case, punctuation, and whitespace (`normalizeTypedText`).
 - Session state (current index, taps so far) is purely local; only submitted
@@ -117,10 +140,10 @@ there.
 The rules live in the API; three of their consequences are easy to get wrong
 here.
 
-**A learning tier advances on 3 correct in a row *within one calendar day*.**
+**A learning tier advances on 3 correct in a row _within one calendar day_.**
 `consecutive_correct` carries across days in the database but is dead for
 advancement once `streak_date` isn't today, so any "N / 3" the UI draws has to
-be gated on that date — see `SlotRow`. The day is the *user's*, from their
+be gated on that date — see `SlotRow`. The day is the _user's_, from their
 profile timezone: `lib/dates.ts` mirrors the server's `todayInTimezone`, and
 comparing against the browser's own day would disagree for anyone travelling.
 
@@ -132,7 +155,7 @@ bar that can't fill.
 **A verse pulled out of review still reports `status: 'review'`.** Two failed
 reviews set `needsRelearning` and park the verse — no `due_at`, out of the
 session — until a slot frees up. Status is derived from `stage`, which doesn't
-change while it waits, so `needsRelearning` must be checked *alongside* status
+change while it waits, so `needsRelearning` must be checked _alongside_ status
 or a demoted verse counts as kept (`isKept` in `AllVerses`). There is no numeric
 strength score and no `decayed` stage; both were removed in the rewrite.
 

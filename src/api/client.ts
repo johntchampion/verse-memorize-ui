@@ -5,6 +5,7 @@ import type {
   MeResponse,
   SessionCompleteResponse,
   SessionTodayResponse,
+  TranslationsResponse,
   VerseDetailResponse,
   VersesResponse,
 } from './types'
@@ -130,8 +131,13 @@ export const api = {
 
   me: () => request<MeResponse>('/api/me'),
 
-  updateTimezone: (timezone: string) =>
-    request<MeResponse>('/api/me', { method: 'PATCH', body: { timezone } }),
+  // Both preferences share one endpoint. The API rejects an empty body, so
+  // the caller passes exactly the field it is changing.
+  updateProfile: (patch: { timezone?: string; translation?: string }) =>
+    request<MeResponse>('/api/me', { method: 'PATCH', body: patch }),
+
+  /** The translations a user can pick between, for the Settings picker. */
+  translations: () => request<TranslationsResponse>('/api/translations'),
 
   sessionToday: () => request<SessionTodayResponse>('/api/session/today'),
 

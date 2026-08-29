@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { AttemptOutcome, SessionExercise, Stage, UserVerse } from '../api/types'
+import type {
+  AttemptOutcome,
+  SessionExercise,
+  Stage,
+  UserVerse,
+} from '../api/types'
 import ProgressBar from '../components/ProgressBar'
 import TileExercise from '../components/TileExercise'
 import TypedExercise from '../components/TypedExercise'
-import { LEARNING_ORDER, STAGE_LABELS, stageChangeMessage } from '../lib/exercise'
+import {
+  LEARNING_ORDER,
+  STAGE_LABELS,
+  stageChangeMessage,
+} from '../lib/exercise'
 
 type Phase = 'loading' | 'empty' | 'running' | 'finishing' | 'done'
 
@@ -82,7 +91,9 @@ function attemptEvent(
       icon: graduated ? '✓' : '↓',
       iconBg: graduated ? 'var(--green-wash)' : 'var(--coral-wash)',
       title: reference,
-      detail: graduated ? 'Graduated — now in review' : 'Lost mastery — back in review',
+      detail: graduated
+        ? 'Graduated — now in review'
+        : 'Lost mastery — back in review',
       detailColor: graduated ? 'var(--green-text)' : 'var(--coral-text)',
     }
   }
@@ -131,6 +142,7 @@ export default function Session() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [queue, setQueue] = useState<SessionExercise[]>([])
   const [texts, setTexts] = useState<Record<string, string>>({})
+  const [translation, setTranslation] = useState('')
   const [index, setIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
@@ -158,10 +170,14 @@ export default function Session() {
       const byId: Record<string, string> = {}
       for (const detail of details) {
         if (!detail.verse.text) throw new Error('verse text unavailable')
+        if (detail.translation !== today.translation) {
+          throw new Error('Your translation changed — start the session again.')
+        }
         byId[detail.verse.id] = detail.verse.text
       }
       setQueue(today.exercises)
       setTexts(byId)
+      setTranslation(today.translation)
       setIndex(0)
       setPhase('running')
     } catch (err) {
@@ -191,7 +207,10 @@ export default function Session() {
     try {
       const result = await api.sessionComplete()
       if (result.slotsFilled.length > 0) {
-        setEvents((prev) => [...prev, ...result.slotsFilled.map(slotFilledEvent)])
+        setEvents((prev) => [
+          ...prev,
+          ...result.slotsFilled.map(slotFilledEvent),
+        ])
       }
       let streak: number | null = null
       try {
@@ -384,6 +403,7 @@ export default function Session() {
           key={index}
           exercise={exercise}
           fullText={fullText}
+          translation={translation}
           onComplete={(correct) => void submit(correct)}
         />
       ) : (
@@ -391,6 +411,7 @@ export default function Session() {
           key={index}
           exercise={exercise}
           fullText={fullText}
+          translation={translation}
           onComplete={(correct) => void submit(correct)}
         />
       )}

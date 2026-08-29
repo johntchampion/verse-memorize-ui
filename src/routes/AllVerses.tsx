@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { VerseListItem } from '../api/types'
 import TabBar from '../components/TabBar'
+import TranslationTag from '../components/TranslationTag'
 import { useApi } from '../hooks/useApi'
 
 /**
@@ -88,8 +89,11 @@ export default function AllVerses() {
             <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>
               {memorized} memorized · {practicing} in practice
             </span>
-            <span className='small muted' style={{ fontWeight: 700 }}>
-              of {total}
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span className='small muted' style={{ fontWeight: 700 }}>
+                of {total}
+              </span>
+              <TranslationTag code={data.translation} />
             </span>
           </div>
           <div className='hundred-bar' aria-hidden='true'>

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { SessionExercise } from '../api/types'
+import TranslationTag from './TranslationTag'
 import {
   STAGE_LABELS,
   missTolerance,
@@ -11,6 +12,7 @@ import {
 interface Props {
   exercise: SessionExercise
   fullText: string
+  translation: string
   /** Fired once every blank is filled; correct = no wrong taps along the way. */
   onComplete: (correct: boolean) => void
 }
@@ -87,6 +89,7 @@ function refill(
 export default function TileExercise({
   exercise,
   fullText,
+  translation,
   onComplete,
 }: Props) {
   // Each segment paired with its position among the blanks (null for text),
@@ -261,7 +264,10 @@ export default function TileExercise({
       </div>
 
       <div className='verse-card'>
-        <p className='verse-ref'>{exercise.reference}</p>
+        <div className='verse-card-head'>
+          <p className='verse-ref'>{exercise.reference}</p>
+          <TranslationTag code={translation} />
+        </div>
         <p className='verse-text'>
           {segments.map(({ segment, blankIndex }, i) => {
             const space = i > 0 ? ' ' : ''

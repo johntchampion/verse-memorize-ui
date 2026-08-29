@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import SlotRow from '../components/SlotRow'
 import TabBar from '../components/TabBar'
+import TranslationTag from '../components/TranslationTag'
 import { useApi } from '../hooks/useApi'
 import { todayInTimezone } from '../lib/dates'
 
@@ -77,6 +78,11 @@ export default function Practicing() {
           style={{ gap: 12, marginTop: 20 }}
           aria-label='Learning slots'
         >
+          {verses.data && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <TranslationTag code={verses.data.translation} />
+            </div>
+          )}
           {Array.from({ length: slots.max }, (_, i) => {
             const slot = i + 1
             const verse = slots.active.find((v) => v.slot === slot) ?? null
@@ -101,7 +107,8 @@ export default function Practicing() {
             <div className='due-row'>
               <span className='due-count'>{dueCount}</span>
               <span className='due-what'>
-                memorized {dueCount === 1 ? 'verse' : 'verses'} due for full recall
+                memorized {dueCount === 1 ? 'verse' : 'verses'} due for full
+                recall
               </span>
             </div>
             <p className='due-copy'>

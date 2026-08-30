@@ -126,7 +126,7 @@ export default function Today() {
                 </p>
               </div>
             )}
-            <p className='today-aside'>Everything else can wait.</p>
+            <p className='today-aside'>Daily practice is how verses stick.</p>
           </div>
         </div>
       </main>

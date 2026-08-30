@@ -1,4 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react'
 import type { SessionExercise } from '../api/types'
 import TranslationTag from './TranslationTag'
 import {
@@ -19,15 +27,41 @@ interface Props {
 }
 
 const WRONG_FLASH_MS = 400
-
-/** The bank always shows exactly this many rows of tiles. */
 const BANK_ROWS = 3
+/** Clearance the current blank needs above the dock before the page scrolls. */
+const BLANK_MARGIN_PX = 12
 
-interface BankState {
-  /** Bank indices currently shown, in display order. */
-  visible: number[]
-  /** Bank indices that didn't fit, drawn from the front as slots open up. */
-  pool: number[]
+const chipRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 14,
+}
+
+/** A run of verse text, or one blank paired with its position in fill order. */
+type VerseChunk =
+  | { kind: 'text'; text: string }
+  | { kind: 'blank'; blankIndex: number; blank: BlankSegment }
+
+/** Tiles on screen, plus the ones that didn't fit and await a slot. */
+interface BankWindow {
+  onScreen: number[]
+  offScreen: number[]
+}
+
+function splitIntoChunks(
+  blankedText: string,
+  fullText: string,
+): { chunks: VerseChunk[]; blanks: BlankSegment[] } {
+  const blanks: BlankSegment[] = []
+  const chunks = parseExercise(blankedText, fullText).map(
+    (segment): VerseChunk => {
+      if (segment.kind === 'text') return { kind: 'text', text: segment.raw }
+      blanks.push(segment)
+      return { kind: 'blank', blankIndex: blanks.length - 1, blank: segment }
+    },
+  )
+  return { chunks, blanks }
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -39,70 +73,263 @@ function shuffle<T>(items: T[]): T[] {
   return out
 }
 
-/**
- * Position within `order` of a tile that fills `answer`, preferring one whose
- * casing matches. Verses like "I AM WHO I AM" put both spellings in the bank,
- * and the window has to offer the one the blank actually wants — a variant is
- * accepted on tap, but it should never be the only thing on screen. Returns -1
- * when neither is there.
- */
-function findAnswerAt(
-  order: number[],
-  words: string[],
+function includesSpellingOf(
+  tileIds: number[],
+  labels: string[],
   answer: string,
-): number {
-  const exact = order.findIndex((i) => wordsMatchExactly(words[i], answer))
-  if (exact !== -1) return exact
-  return order.findIndex((i) => wordsMatch(words[i], answer))
+): boolean {
+  return tileIds.some((id) => wordsMatchExactly(labels[id], answer))
 }
 
 /**
- * Replaces the tile at `tappedPos` with one drawn from the pool, preferring
- * whatever keeps the upcoming answer — in its own casing — on screen. With the
- * pool exhausted the slot simply closes up.
+ * Position within `tileIds` of the best tile for `answer`: one that spells
+ * it exactly, or failing that a differently-capitalized variant, which taps
+ * accept too. -1 when neither is there.
  */
-function refill(
-  bank: BankState,
-  tappedPos: number,
-  nextAnswer: string | undefined,
-  words: string[],
-): BankState {
-  const rest = bank.visible.filter((_, pos) => pos !== tappedPos)
-  if (bank.pool.length === 0) return { visible: rest, pool: [] }
+function positionOfBestTile(
+  tileIds: number[],
+  labels: string[],
+  answer: string,
+): number {
+  const exact = tileIds.findIndex((id) => wordsMatchExactly(labels[id], answer))
+  if (exact !== -1) return exact
+  return tileIds.findIndex((id) => wordsMatch(labels[id], answer))
+}
+
+/**
+ * Taps accept any capitalization, so the tile tapped for `answer` may not be
+ * the one that spells it. Trading their labels keeps what is left in the bank
+ * matching the blanks that are left — otherwise "I AM WHO I AM" spends its
+ * lowercase tile early and has none for "how I am to be remembered".
+ */
+function withAnswerSpelling(
+  labels: string[],
+  tappedId: number,
+  answer: string,
+  availableIds: number[],
+): string[] {
+  if (wordsMatchExactly(labels[tappedId], answer)) return labels
+  const partner = availableIds.find(
+    (id) => id !== tappedId && wordsMatchExactly(labels[id], answer),
+  )
+  if (partner === undefined) return labels
+
+  const traded = [...labels]
+  ;[traded[tappedId], traded[partner]] = [traded[partner], traded[tappedId]]
+  return traded
+}
+
+/** Sends tiles past `capacity` off screen, keeping `neededAnswer` in view. */
+function trimToCapacity(
+  bank: BankWindow,
+  capacity: number,
+  labels: string[],
+  neededAnswer: string | undefined,
+): BankWindow {
+  const onScreen = bank.onScreen.slice(0, capacity)
+  const overflow = bank.onScreen.slice(capacity)
+
+  if (
+    neededAnswer !== undefined &&
+    onScreen.length > 0 &&
+    !includesSpellingOf(onScreen, labels, neededAnswer)
+  ) {
+    const rescue = positionOfBestTile(overflow, labels, neededAnswer)
+    if (rescue !== -1) {
+      const last = onScreen.length - 1
+      ;[onScreen[last], overflow[rescue]] = [overflow[rescue], onScreen[last]]
+    }
+  }
+
+  return { onScreen, offScreen: [...overflow, ...bank.offScreen] }
+}
+
+/** Swaps the tapped tile for an off-screen one that keeps play going. */
+function replaceTappedTile(
+  bank: BankWindow,
+  tappedPosition: number,
+  upcomingAnswer: string | undefined,
+  labels: string[],
+): BankWindow {
+  const remaining = bank.onScreen.filter((_, at) => at !== tappedPosition)
+  if (bank.offScreen.length === 0) return { onScreen: remaining, offScreen: [] }
 
   let drawAt = 0
   if (
-    nextAnswer !== undefined &&
-    !rest.some((i) => wordsMatchExactly(words[i], nextAnswer))
+    upcomingAnswer !== undefined &&
+    !includesSpellingOf(remaining, labels, upcomingAnswer)
   ) {
-    const found = findAnswerAt(bank.pool, words, nextAnswer)
-    if (found !== -1) drawAt = found
+    const rescue = positionOfBestTile(bank.offScreen, labels, upcomingAnswer)
+    if (rescue !== -1) drawAt = rescue
   }
-  const visible = [...bank.visible]
-  visible[tappedPos] = bank.pool[drawAt]
-  return { visible, pool: bank.pool.filter((_, i) => i !== drawAt) }
+
+  const onScreen = [...bank.onScreen]
+  onScreen[tappedPosition] = bank.offScreen[drawAt]
+  const offScreen = bank.offScreen.filter((_, at) => at !== drawAt)
+  return { onScreen, offScreen }
+}
+
+function showOneMoreTile(bank: BankWindow): BankWindow {
+  return {
+    onScreen: [...bank.onScreen, bank.offScreen[0]],
+    offScreen: bank.offScreen.slice(1),
+  }
+}
+
+function heightOfRows(container: HTMLElement, tile: HTMLElement): number {
+  const rowGap = parseFloat(getComputedStyle(container).rowGap) || 0
+  return BANK_ROWS * tile.offsetHeight + (BANK_ROWS - 1) * rowGap
+}
+
+function countTilesInRows(tiles: HTMLElement[], rows: number): number {
+  const rowTops = [...new Set(tiles.map((tile) => tile.offsetTop))].sort(
+    (a, b) => a - b,
+  )
+  return tiles.filter((tile) => rowTops.indexOf(tile.offsetTop) < rows).length
+}
+
+function isBlankOutOfView(
+  blank: HTMLElement,
+  dock: HTMLElement | null,
+): boolean {
+  const dockTop = dock?.getBoundingClientRect().top ?? window.innerHeight
+  const rect = blank.getBoundingClientRect()
+  return rect.bottom > dockTop - BLANK_MARGIN_PX || rect.top < BLANK_MARGIN_PX
+}
+
+function StageChip({ exercise }: { exercise: SessionExercise }) {
+  const isReview = exercise.queue === 'review'
+  return (
+    <span className={isReview ? 'chip chip-review' : 'chip chip-active'}>
+      {isReview ? 'Review' : STAGE_LABELS[exercise.stage]}
+    </span>
+  )
 }
 
 /**
- * Tile exercise: validates on tap. A correct tile fills the next empty blank
- * (a green pill popping into place); a wrong tile shakes, breaks the combo and
- * changes nothing.
+ * Once a slip is spent the remaining budget matters more than the combo, and
+ * showing it is the only way the forgiveness is legible.
+ */
+function ScoreChip({
+  filledBlanks,
+  totalBlanks,
+  combo,
+  misses,
+  slipBudget,
+}: {
+  filledBlanks: number
+  totalBlanks: number
+  combo: number
+  misses: number
+  slipBudget: number
+}) {
+  const slipsLeft = Math.max(0, slipBudget - misses)
+  const label =
+    misses > 0 && slipBudget > 0
+      ? `${slipsLeft} slip${slipsLeft === 1 ? '' : 's'} left`
+      : combo >= 2
+        ? `🔥 ${combo} in a row`
+        : `${filledBlanks} of ${totalBlanks} blanks`
+
+  return (
+    <span
+      className={
+        misses > 0 && slipsLeft === 0 ? 'chip chip-relearn' : 'chip chip-streak'
+      }
+    >
+      {label}
+    </span>
+  )
+}
+
+function VerseBody({
+  chunks,
+  filledBlanks,
+  currentBlankRef,
+}: {
+  chunks: VerseChunk[]
+  filledBlanks: number
+  currentBlankRef: RefObject<HTMLSpanElement | null>
+}) {
+  return (
+    <p className='verse-text'>
+      {chunks.map((chunk, index) => {
+        const space = index > 0 ? ' ' : ''
+
+        if (chunk.kind === 'text') {
+          return (
+            <span key={index}>
+              {space}
+              {chunk.text}
+            </span>
+          )
+        }
+
+        if (chunk.blankIndex < filledBlanks) {
+          return (
+            <span key={index}>
+              {space}
+              <span className='blank-filled'>{chunk.blank.filledRaw}</span>
+            </span>
+          )
+        }
+
+        const isCurrent = chunk.blankIndex === filledBlanks
+        return (
+          <span key={index}>
+            {space}
+            {chunk.blank.punctBefore}
+            <span
+              ref={isCurrent ? currentBlankRef : undefined}
+              className={isCurrent ? 'blank blank-current' : 'blank'}
+              aria-label='blank'
+            >
+              {chunk.blank.hidden}
+            </span>
+            {chunk.blank.punctAfter}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
+function WordTile({
+  label,
+  isSpent,
+  isWrong,
+  disabled,
+  onTap,
+}: {
+  label: string
+  isSpent: boolean
+  isWrong: boolean
+  disabled: boolean
+  onTap: () => void
+}) {
+  const state = isSpent ? ' tile-used' : isWrong ? ' tile-wrong' : ''
+  return (
+    <button
+      type='button'
+      className={`tile tile-in${state}`}
+      disabled={disabled}
+      onClick={onTap}
+    >
+      {label}
+    </button>
+  )
+}
+
+/**
+ * Tile exercise: validates on tap. A correct tile fills the next empty blank; a
+ * wrong tile shakes, breaks the combo and changes nothing. The attempt is
+ * graded on wrong taps, forgiving one per `missTolerance` blanks.
  *
- * The word bank is a fixed BANK_ROWS-row window docked to the bottom of the
- * screen. How many tiles fit is measured, not counted: a layout effect trims
- * tiles that wrap past the last row back into a hidden pool and tops the rows
- * back up when a tap frees space, always keeping the current blank's answer on
- * screen (blanks fill strictly in order, so that's the only invariant needed).
- * Banks that fit entirely keep the classic behavior — used tiles hollow out in
- * place. Long verses auto-scroll to keep the current blank in view above the
- * dock. Once every blank is filled, the Next button at the bottom of the dock
- * activates.
- *
- * Correctness per-tap is already known, so the attempt is graded on the number
- * of wrong taps — forgiving a slip per `missTolerance` blanks. A review blanks
- * every word, so without that a single mistap on a 75-word verse would count
- * the same as one on a 4-blank learning exercise, and two of those demote the
- * verse out of review entirely.
+ * The bank is a BANK_ROWS-tall window docked to the bottom of the screen. How
+ * many tiles fit is measured rather than counted: a layout effect sends tiles
+ * that wrapped past the last row off screen and brings them back as taps free
+ * space, always keeping a tile that spells the current answer in view. Banks
+ * that fit whole never trim, so their tiles hollow out in place instead.
  */
 export default function TileExercise({
   exercise,
@@ -111,55 +338,41 @@ export default function TileExercise({
   isLast,
   onComplete,
 }: Props) {
-  // Each segment paired with its position among the blanks (null for text),
-  // computed once so render itself mutates nothing.
-  const { segments, blanks } = useMemo(() => {
-    const parsed = parseExercise(exercise.blankedText, fullText)
-    let counter = 0
-    const indexed = parsed.map((segment) => ({
-      segment,
-      blankIndex: segment.kind === 'blank' ? counter++ : null,
-    }))
-    return {
-      segments: indexed,
-      blanks: parsed.filter((s): s is BlankSegment => s.kind === 'blank'),
-    }
-  }, [exercise.blankedText, fullText])
+  const { chunks, blanks } = useMemo(
+    () => splitIntoChunks(exercise.blankedText, fullText),
+    [exercise.blankedText, fullText],
+  )
 
-  // The bank's tile labels. Held in state rather than read straight off the
-  // exercise because a wrong-cased tap swaps two case-variant labels (see
-  // `tapTile`); bank indexes still address this array, so nothing else moves.
-  const [words, setWords] = useState<string[]>(() => [...exercise.wordBank])
-  const [bank, setBank] = useState<BankState>(() => ({
-    visible: shuffle(words.map((_, i) => i)),
-    pool: [],
+  const [labels, setLabels] = useState<string[]>(() => [...exercise.wordBank])
+  const [bank, setBank] = useState<BankWindow>(() => ({
+    onScreen: shuffle(labels.map((_, id) => id)),
+    offScreen: [],
   }))
   const [bankHeight, setBankHeight] = useState<number | null>(null)
-  const [filledCount, setFilledCount] = useState(0)
-  const [usedTiles, setUsedTiles] = useState<ReadonlySet<number>>(new Set())
-  const [wrongTile, setWrongTile] = useState<number | null>(null)
+  const [filledBlanks, setFilledBlanks] = useState(0)
+  const [spentTiles, setSpentTiles] = useState<ReadonlySet<number>>(new Set())
+  const [wrongTileId, setWrongTileId] = useState<number | null>(null)
   const [combo, setCombo] = useState(0)
   const [misses, setMisses] = useState(0)
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([])
   const currentBlankRef = useRef<HTMLSpanElement | null>(null)
   const dockRef = useRef<HTMLDivElement | null>(null)
   const bankRef = useRef<HTMLDivElement | null>(null)
-  // True once any tile has been trimmed for space: the bank is a rolling
-  // window and used tiles are replaced rather than hollowed out.
-  const rolling = useRef(false)
-  // Blocks top-ups after a trim so trim/append don't ping-pong; a tap frees
-  // space and lifts the block.
-  const windowFull = useRef(false)
+  const isRolling = useRef(false)
+  /** Blocks top-ups after a trim so trim and top-up can't ping-pong. */
+  const windowIsFull = useRef(false)
+
+  const allBlanksFilled = filledBlanks >= blanks.length
+  const slipBudget = missTolerance(blanks.length)
 
   useEffect(() => {
-    const pending = timers.current
+    const pending = flashTimers.current
     return () => pending.forEach(clearTimeout)
   }, [])
 
-  // Size and fill the bank window before paint: lock the container to
-  // BANK_ROWS rows tall, move tiles that wrapped past the last row into the
-  // pool (swapping the needed answer back in if it was among them), and when
-  // there's room, pull tiles back out of the pool one per pass.
+  // Measure first, then fit: the height can only be read once tiles have been
+  // laid out, and the fit can only be judged against a locked-down height.
   useLayoutEffect(() => {
     const container = bankRef.current
     if (!container) return
@@ -167,145 +380,82 @@ export default function TileExercise({
     if (tiles.length === 0) return
 
     if (bankHeight === null) {
-      const gap = parseFloat(getComputedStyle(container).rowGap) || 0
-      setBankHeight(BANK_ROWS * tiles[0].offsetHeight + (BANK_ROWS - 1) * gap)
+      setBankHeight(heightOfRows(container, tiles[0]))
       return
     }
 
-    const rowTops = [...new Set(tiles.map((t) => t.offsetTop))].sort(
-      (a, b) => a - b,
-    )
-    const fitCount = tiles.filter(
-      (t) => rowTops.indexOf(t.offsetTop) < BANK_ROWS,
-    ).length
-
-    if (fitCount < bank.visible.length) {
-      rolling.current = true
-      windowFull.current = true
-      const kept = bank.visible.slice(0, fitCount)
-      const cut = bank.visible.slice(fitCount)
-      const needed = blanks[filledCount]?.answer
-      if (
-        needed !== undefined &&
-        !kept.some((i) => wordsMatchExactly(words[i], needed))
-      ) {
-        const at = findAnswerAt(cut, words, needed)
-        if (at !== -1 && kept.length > 0) {
-          ;[kept[kept.length - 1], cut[at]] = [cut[at], kept[kept.length - 1]]
-        }
-      }
-      setBank({ visible: kept, pool: [...cut, ...bank.pool] })
-    } else if (bank.pool.length > 0 && !windowFull.current) {
-      setBank({
-        visible: [...bank.visible, bank.pool[0]],
-        pool: bank.pool.slice(1),
-      })
+    const capacity = countTilesInRows(tiles, BANK_ROWS)
+    if (capacity < bank.onScreen.length) {
+      isRolling.current = true
+      windowIsFull.current = true
+      setBank(
+        trimToCapacity(bank, capacity, labels, blanks[filledBlanks]?.answer),
+      )
+    } else if (bank.offScreen.length > 0 && !windowIsFull.current) {
+      setBank(showOneMoreTile(bank))
     }
-  }, [bank, bankHeight, blanks, filledCount, words])
+  }, [bank, bankHeight, blanks, filledBlanks, labels])
 
-  // Keep the current blank visible above the dock as fills march down a long
-  // verse; leave the page alone whenever the blank is already in view.
   useEffect(() => {
     const blank = currentBlankRef.current
-    if (!blank) return
-    const dockTop =
-      dockRef.current?.getBoundingClientRect().top ?? window.innerHeight
-    const rect = blank.getBoundingClientRect()
-    if (rect.bottom > dockTop - 12 || rect.top < 12) {
+    if (blank && isBlankOutOfView(blank, dockRef.current)) {
       blank.scrollIntoView({ block: 'center', behavior: 'smooth' })
     }
-  }, [filledCount])
+  }, [filledBlanks])
 
-  const complete = filledCount >= blanks.length
-  const slips = missTolerance(blanks.length)
-  const slipsLeft = Math.max(0, slips - misses)
+  function fillCurrentBlank(tappedPosition: number, tileId: number) {
+    const answer = blanks[filledBlanks].answer
+    const availableIds = [...bank.offScreen, ...bank.onScreen].filter(
+      (id) => !spentTiles.has(id),
+    )
+    const nextLabels = withAnswerSpelling(labels, tileId, answer, availableIds)
+    if (nextLabels !== labels) setLabels(nextLabels)
 
-  function tapTile(pos: number, bankIdx: number) {
-    if (complete || usedTiles.has(bankIdx)) return
-    const target = blanks[filledCount]
-
-    if (wordsMatch(words[bankIdx], target.answer)) {
-      // Taps are case-insensitive, but the bank's casing has to stay honest:
-      // when a case-variant was tapped, trade labels with the tile that
-      // actually spells the answer, so the tile spent here reads the answer's
-      // casing and the variant is left behind for the blank that wants it.
-      // Pooled partners are preferred, so no on-screen tile flips casing
-      // unless it has to.
-      let nextWords = words
-      if (!wordsMatchExactly(words[bankIdx], target.answer)) {
-        const partner = [...bank.pool, ...bank.visible].find(
-          (i) =>
-            i !== bankIdx &&
-            !usedTiles.has(i) &&
-            wordsMatchExactly(words[i], target.answer),
-        )
-        if (partner !== undefined) {
-          nextWords = [...words]
-          ;[nextWords[bankIdx], nextWords[partner]] = [
-            nextWords[partner],
-            nextWords[bankIdx],
-          ]
-          setWords(nextWords)
-        }
-      }
-
-      windowFull.current = false
-      if (rolling.current) {
-        setBank((prev) =>
-          refill(prev, pos, blanks[filledCount + 1]?.answer, nextWords),
-        )
-      } else {
-        setUsedTiles((prev) => new Set(prev).add(bankIdx))
-      }
-      setCombo((c) => c + 1)
-      setWrongTile(null)
-      setFilledCount(filledCount + 1)
+    windowIsFull.current = false
+    if (isRolling.current) {
+      const upcoming = blanks[filledBlanks + 1]?.answer
+      setBank((current) =>
+        replaceTappedTile(current, tappedPosition, upcoming, nextLabels),
+      )
     } else {
-      setMisses((m) => m + 1)
-      setCombo(0)
-      setWrongTile(bankIdx)
-      timers.current.push(setTimeout(() => setWrongTile(null), WRONG_FLASH_MS))
+      setSpentTiles((current) => new Set(current).add(tileId))
+    }
+
+    setCombo((count) => count + 1)
+    setWrongTileId(null)
+    setFilledBlanks(filledBlanks + 1)
+  }
+
+  function rejectTap(tileId: number) {
+    setMisses((count) => count + 1)
+    setCombo(0)
+    setWrongTileId(tileId)
+    flashTimers.current.push(
+      setTimeout(() => setWrongTileId(null), WRONG_FLASH_MS),
+    )
+  }
+
+  function tapTile(tappedPosition: number, tileId: number) {
+    if (allBlanksFilled || spentTiles.has(tileId)) return
+
+    if (wordsMatch(labels[tileId], blanks[filledBlanks].answer)) {
+      fillCurrentBlank(tappedPosition, tileId)
+    } else {
+      rejectTap(tileId)
     }
   }
 
   return (
     <div className='exercise-pane'>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 14,
-        }}
-      >
-        <span
-          className={
-            exercise.queue === 'review'
-              ? 'chip chip-review'
-              : 'chip chip-active'
-          }
-        >
-          {exercise.queue === 'review'
-            ? 'Review'
-            : STAGE_LABELS[exercise.stage]}
-        </span>
-        <span
-          className={
-            misses > 0 && slipsLeft === 0
-              ? 'chip chip-relearn'
-              : 'chip chip-streak'
-          }
-        >
-          {/* Once a slip is spent, the budget matters more than the combo —
-              showing it is the only way the forgiveness is legible. */}
-          {misses > 0 && slips > 0
-            ? slipsLeft === 1
-              ? '1 slip left'
-              : `${slipsLeft} slips left`
-            : combo >= 2
-              ? `🔥 ${combo} in a row`
-              : `${filledCount} of ${blanks.length} blanks`}
-        </span>
+      <div style={chipRowStyle}>
+        <StageChip exercise={exercise} />
+        <ScoreChip
+          filledBlanks={filledBlanks}
+          totalBlanks={blanks.length}
+          combo={combo}
+          misses={misses}
+          slipBudget={slipBudget}
+        />
       </div>
 
       <div className='verse-card'>
@@ -313,43 +463,11 @@ export default function TileExercise({
           <p className='verse-ref'>{exercise.reference}</p>
           <TranslationTag code={translation} />
         </div>
-        <p className='verse-text'>
-          {segments.map(({ segment, blankIndex }, i) => {
-            const space = i > 0 ? ' ' : ''
-            if (segment.kind === 'text' || blankIndex === null) {
-              return (
-                <span key={i}>
-                  {space}
-                  {segment.kind === 'text' ? segment.raw : segment.filledRaw}
-                </span>
-              )
-            }
-            const filled = blankIndex < filledCount
-            const current = blankIndex === filledCount
-            if (filled) {
-              return (
-                <span key={i}>
-                  {space}
-                  <span className='blank-filled'>{segment.filledRaw}</span>
-                </span>
-              )
-            }
-            return (
-              <span key={i}>
-                {space}
-                {segment.punctBefore}
-                <span
-                  ref={current ? currentBlankRef : undefined}
-                  className={current ? 'blank blank-current' : 'blank'}
-                  aria-label='blank'
-                >
-                  {segment.hidden}
-                </span>
-                {segment.punctAfter}
-              </span>
-            )
-          })}
-        </p>
+        <VerseBody
+          chunks={chunks}
+          filledBlanks={filledBlanks}
+          currentBlankRef={currentBlankRef}
+        />
       </div>
 
       <div className='bank-dock' ref={dockRef}>
@@ -361,26 +479,17 @@ export default function TileExercise({
           ref={bankRef}
           style={bankHeight !== null ? { height: bankHeight } : undefined}
         >
-          {bank.visible.map((bankIdx, pos) => {
-            const word = words[bankIdx]
-            const used = usedTiles.has(bankIdx)
-            const className = [
-              'tile',
-              'tile-in',
-              used ? 'tile-used' : wrongTile === bankIdx ? 'tile-wrong' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')
+          {bank.onScreen.map((tileId, position) => {
+            const isSpent = spentTiles.has(tileId)
             return (
-              <button
-                key={bankIdx}
-                type='button'
-                className={className}
-                disabled={used || complete}
-                onClick={() => tapTile(pos, bankIdx)}
-              >
-                {word}
-              </button>
+              <WordTile
+                key={tileId}
+                label={labels[tileId]}
+                isSpent={isSpent}
+                isWrong={wrongTileId === tileId}
+                disabled={isSpent || allBlanksFilled}
+                onTap={() => tapTile(position, tileId)}
+              />
             )
           })}
         </div>
@@ -389,8 +498,8 @@ export default function TileExercise({
           type='button'
           className='btn'
           style={{ marginTop: 20 }}
-          disabled={!complete}
-          onClick={() => onComplete(misses <= slips)}
+          disabled={!allBlanksFilled}
+          onClick={() => onComplete(misses <= slipBudget)}
         >
           {isLast ? 'Finish session →' : 'Next verse →'}
         </button>

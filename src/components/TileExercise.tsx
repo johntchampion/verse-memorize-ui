@@ -6,6 +6,7 @@ import {
   missTolerance,
   parseExercise,
   wordsMatch,
+  wordsMatchExactly,
   type BlankSegment,
 } from '../lib/exercise'
 
@@ -39,9 +40,26 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 /**
+ * Position within `order` of a tile that fills `answer`, preferring one whose
+ * casing matches. Verses like "I AM WHO I AM" put both spellings in the bank,
+ * and the window has to offer the one the blank actually wants — a variant is
+ * accepted on tap, but it should never be the only thing on screen. Returns -1
+ * when neither is there.
+ */
+function findAnswerAt(
+  order: number[],
+  words: string[],
+  answer: string,
+): number {
+  const exact = order.findIndex((i) => wordsMatchExactly(words[i], answer))
+  if (exact !== -1) return exact
+  return order.findIndex((i) => wordsMatch(words[i], answer))
+}
+
+/**
  * Replaces the tile at `tappedPos` with one drawn from the pool, preferring
- * whatever keeps the upcoming answer on screen. With the pool exhausted the
- * slot simply closes up.
+ * whatever keeps the upcoming answer — in its own casing — on screen. With the
+ * pool exhausted the slot simply closes up.
  */
 function refill(
   bank: BankState,
@@ -55,9 +73,9 @@ function refill(
   let drawAt = 0
   if (
     nextAnswer !== undefined &&
-    !rest.some((i) => wordsMatch(words[i], nextAnswer))
+    !rest.some((i) => wordsMatchExactly(words[i], nextAnswer))
   ) {
-    const found = bank.pool.findIndex((i) => wordsMatch(words[i], nextAnswer))
+    const found = findAnswerAt(bank.pool, words, nextAnswer)
     if (found !== -1) drawAt = found
   }
   const visible = [...bank.visible]
@@ -108,8 +126,12 @@ export default function TileExercise({
     }
   }, [exercise.blankedText, fullText])
 
+  // The bank's tile labels. Held in state rather than read straight off the
+  // exercise because a wrong-cased tap swaps two case-variant labels (see
+  // `tapTile`); bank indexes still address this array, so nothing else moves.
+  const [words, setWords] = useState<string[]>(() => [...exercise.wordBank])
   const [bank, setBank] = useState<BankState>(() => ({
-    visible: shuffle(exercise.wordBank.map((_, i) => i)),
+    visible: shuffle(words.map((_, i) => i)),
     pool: [],
   }))
   const [bankHeight, setBankHeight] = useState<number | null>(null)
@@ -165,11 +187,9 @@ export default function TileExercise({
       const needed = blanks[filledCount]?.answer
       if (
         needed !== undefined &&
-        !kept.some((i) => wordsMatch(exercise.wordBank[i], needed))
+        !kept.some((i) => wordsMatchExactly(words[i], needed))
       ) {
-        const at = cut.findIndex((i) =>
-          wordsMatch(exercise.wordBank[i], needed),
-        )
+        const at = findAnswerAt(cut, words, needed)
         if (at !== -1 && kept.length > 0) {
           ;[kept[kept.length - 1], cut[at]] = [cut[at], kept[kept.length - 1]]
         }
@@ -181,7 +201,7 @@ export default function TileExercise({
         pool: bank.pool.slice(1),
       })
     }
-  }, [bank, bankHeight, blanks, filledCount, exercise.wordBank])
+  }, [bank, bankHeight, blanks, filledCount, words])
 
   // Keep the current blank visible above the dock as fills march down a long
   // verse; leave the page alone whenever the blank is already in view.
@@ -200,15 +220,39 @@ export default function TileExercise({
   const slips = missTolerance(blanks.length)
   const slipsLeft = Math.max(0, slips - misses)
 
-  function tapTile(pos: number, bankIdx: number, word: string) {
+  function tapTile(pos: number, bankIdx: number) {
     if (complete || usedTiles.has(bankIdx)) return
     const target = blanks[filledCount]
 
-    if (wordsMatch(word, target.answer)) {
+    if (wordsMatch(words[bankIdx], target.answer)) {
+      // Taps are case-insensitive, but the bank's casing has to stay honest:
+      // when a case-variant was tapped, trade labels with the tile that
+      // actually spells the answer, so the tile spent here reads the answer's
+      // casing and the variant is left behind for the blank that wants it.
+      // Pooled partners are preferred, so no on-screen tile flips casing
+      // unless it has to.
+      let nextWords = words
+      if (!wordsMatchExactly(words[bankIdx], target.answer)) {
+        const partner = [...bank.pool, ...bank.visible].find(
+          (i) =>
+            i !== bankIdx &&
+            !usedTiles.has(i) &&
+            wordsMatchExactly(words[i], target.answer),
+        )
+        if (partner !== undefined) {
+          nextWords = [...words]
+          ;[nextWords[bankIdx], nextWords[partner]] = [
+            nextWords[partner],
+            nextWords[bankIdx],
+          ]
+          setWords(nextWords)
+        }
+      }
+
       windowFull.current = false
       if (rolling.current) {
         setBank((prev) =>
-          refill(prev, pos, blanks[filledCount + 1]?.answer, exercise.wordBank),
+          refill(prev, pos, blanks[filledCount + 1]?.answer, nextWords),
         )
       } else {
         setUsedTiles((prev) => new Set(prev).add(bankIdx))
@@ -318,7 +362,7 @@ export default function TileExercise({
           style={bankHeight !== null ? { height: bankHeight } : undefined}
         >
           {bank.visible.map((bankIdx, pos) => {
-            const word = exercise.wordBank[bankIdx]
+            const word = words[bankIdx]
             const used = usedTiles.has(bankIdx)
             const className = [
               'tile',
@@ -333,7 +377,7 @@ export default function TileExercise({
                 type='button'
                 className={className}
                 disabled={used || complete}
-                onClick={() => tapTile(pos, bankIdx, word)}
+                onClick={() => tapTile(pos, bankIdx)}
               >
                 {word}
               </button>

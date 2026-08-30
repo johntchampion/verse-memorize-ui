@@ -74,10 +74,17 @@ export function parseExercise(
   })
 }
 
+/** Curly quotes and apostrophes are the same character to a reader. */
+const canonWord = (w: string) => w.replace(/’/g, "'")
+
 /** Case-insensitive, curly-quote-tolerant comparison for single bank words. */
 export function wordsMatch(a: string, b: string): boolean {
-  const canon = (w: string) => w.toLowerCase().replace(/’/g, "'")
-  return canon(a) === canon(b)
+  return canonWord(a).toLowerCase() === canonWord(b).toLowerCase()
+}
+
+/** As `wordsMatch`, but casing has to agree too. */
+export function wordsMatchExactly(a: string, b: string): boolean {
+  return canonWord(a) === canonWord(b)
 }
 
 /**

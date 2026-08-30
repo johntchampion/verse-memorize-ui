@@ -99,6 +99,7 @@ export interface MeResponse {
     createdAt: string
   }
   streak: number
+  completedToday: boolean
   sessionsCompleted: number
   versesStarted: number
   slots: {

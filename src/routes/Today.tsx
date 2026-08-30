@@ -73,16 +73,18 @@ export default function Today() {
     )
   }
 
-  const { streak } = me.data
+  const { streak, completedToday } = me.data
   const exercises = session.data.exercises
   const pending = exercises.length > 0
   const verseCount = new Set(exercises.map((e) => e.verseId)).size
 
   const copy = !pending
     ? 'Done for today. Come back tomorrow.'
-    : streak > 0
-      ? `Practice today to make it ${numberWord(streak + 1)}.`
-      : 'Practice today to start your streak.'
+    : completedToday
+      ? "Streak's in for today — extra practice never hurts."
+      : streak > 0
+        ? `Practice today to make it ${numberWord(streak + 1)}.`
+        : 'Practice today to start your streak.'
 
   return (
     <>

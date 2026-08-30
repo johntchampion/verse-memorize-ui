@@ -266,9 +266,9 @@ export default function VerseDetail() {
                 </span>
                 <span className='muted'>
                   {attempt.exercise_type === 'tile_fill_blank'
-                    ? 'Tiles'
-                    : 'Typed'}{' '}
-                  · {formatDate(attempt.created_at)}
+                    ? ''
+                    : '👑 '}
+                  {formatDate(attempt.created_at)}
                 </span>
               </div>
             ))}

@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { UserVerse } from '../api/types'
 import StageLadder from '../components/StageLadder'
@@ -74,6 +74,7 @@ function progressCopy(userVerse: UserVerse): string {
 
 export default function VerseDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { data, loading, error, refetch } = useApi(() => api.verse(id ?? ''))
 
   if (loading) {
@@ -91,9 +92,9 @@ export default function VerseDetail() {
         <button className='btn-ghost' onClick={refetch}>
           Try again
         </button>
-        <Link to='/all' className='btn-ghost'>
+        <button className='btn-ghost' onClick={() => navigate(-1)}>
           Back to verses
-        </Link>
+        </button>
       </main>
     )
   }
@@ -115,9 +116,13 @@ export default function VerseDetail() {
   return (
     <main className='shell stack'>
       <header className='screen-header' style={{ marginBottom: 0 }}>
-        <Link to='/all' className='icon-btn' aria-label='Back to verses'>
+        <button
+          className='icon-btn'
+          aria-label='Back to verses'
+          onClick={() => navigate(-1)}
+        >
           ←
-        </Link>
+        </button>
         <span className='small muted' style={{ fontWeight: 800 }}>
           Verses
         </span>

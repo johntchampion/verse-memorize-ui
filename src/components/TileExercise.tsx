@@ -13,7 +13,7 @@ interface Props {
   exercise: SessionExercise
   fullText: string
   translation: string
-  /** Fired once every blank is filled; correct = no wrong taps along the way. */
+  isLast: boolean
   onComplete: (correct: boolean) => void
 }
 
@@ -90,6 +90,7 @@ export default function TileExercise({
   exercise,
   fullText,
   translation,
+  isLast,
   onComplete,
 }: Props) {
   // Each segment paired with its position among the blanks (null for text),
@@ -347,7 +348,7 @@ export default function TileExercise({
           disabled={!complete}
           onClick={() => onComplete(misses <= slips)}
         >
-          Next verse →
+          {isLast ? 'Finish session →' : 'Next verse →'}
         </button>
       </div>
     </div>

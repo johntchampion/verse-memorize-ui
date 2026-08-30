@@ -7,6 +7,7 @@ interface Props {
   exercise: SessionExercise
   fullText: string
   translation: string
+  isLast: boolean
   onComplete: (correct: boolean) => void
 }
 
@@ -22,6 +23,7 @@ export default function TypedExercise({
   exercise,
   fullText,
   translation,
+  isLast,
   onComplete,
 }: Props) {
   const [value, setValue] = useState('')
@@ -119,7 +121,7 @@ export default function TypedExercise({
             className='btn'
             onClick={() => onComplete(result === 'correct')}
           >
-            Next verse →
+            {isLast ? 'Finish session →' : 'Next verse →'}
           </button>
         </>
       )}

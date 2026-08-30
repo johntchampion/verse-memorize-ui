@@ -377,6 +377,7 @@ export default function Session() {
 
   const exercise = queue[index]
   const fullText = texts[exercise.verseId]
+  const isLast = index === queue.length - 1
 
   return (
     <main className='shell stack shell-full'>
@@ -404,6 +405,7 @@ export default function Session() {
           exercise={exercise}
           fullText={fullText}
           translation={translation}
+          isLast={isLast}
           onComplete={(correct) => void submit(correct)}
         />
       ) : (
@@ -412,6 +414,7 @@ export default function Session() {
           exercise={exercise}
           fullText={fullText}
           translation={translation}
+          isLast={isLast}
           onComplete={(correct) => void submit(correct)}
         />
       )}

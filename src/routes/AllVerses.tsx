@@ -109,34 +109,23 @@ export default function AllVerses() {
         </div>
 
         <div className='arc-list'>
-          {data.verses.map((verse) => {
-            const inner = (
-              <>
-                <span className={dotClass(verse)} aria-hidden='true' />
-                <div className='arc-main'>
-                  <div className='arc-head'>
-                    <span className='arc-ref'>{verse.reference}</span>
-                    <StatusChip verse={verse} />
-                  </div>
-                  {verse.text && <p className='arc-snippet'>{verse.text}</p>}
+          {data.verses.map((verse) => (
+            <Link
+              key={verse.id}
+              to={`/verses/${verse.id}`}
+              className='arc-row'
+              style={{ color: 'inherit' }}
+            >
+              <span className={dotClass(verse)} aria-hidden='true' />
+              <div className='arc-main'>
+                <div className='arc-head'>
+                  <span className='arc-ref'>{verse.reference}</span>
+                  <StatusChip verse={verse} />
                 </div>
-              </>
-            )
-            return verse.status === 'locked' ? (
-              <div key={verse.id} className='arc-row arc-row-locked'>
-                {inner}
+                <p className='arc-snippet'>{verse.text}</p>
               </div>
-            ) : (
-              <Link
-                key={verse.id}
-                to={`/verses/${verse.id}`}
-                className='arc-row'
-                style={{ color: 'inherit' }}
-              >
-                {inner}
-              </Link>
-            )
-          })}
+            </Link>
+          ))}
         </div>
       </main>
       <TabBar />

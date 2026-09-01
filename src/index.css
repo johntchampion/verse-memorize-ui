@@ -1659,6 +1659,442 @@ a:hover {
     color: var(--coral-text);
 }
 
+/* --- Practice queue ------------------------------------------------------- */
+
+/* Practicing-tab entry row into the queue view. */
+.queue-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 18px;
+    padding: 14px 4px;
+    color: inherit;
+}
+
+.queue-link-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--coral-text);
+}
+
+.queue-link-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--locked);
+}
+
+.queue-link-chev {
+    flex: 1;
+    text-align: right;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--dash);
+}
+
+/* One card holding a compact line per slot, above the waiting list. */
+.queue-slots-card {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius);
+}
+
+.queue-slot-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 8px;
+}
+
+.queue-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: inherit;
+}
+
+.queue-slot-dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--coral);
+}
+
+.queue-slot-ref {
+    flex: none;
+    font-family: var(--serif);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.queue-slot-text {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--serif);
+    font-size: 0.81rem;
+    color: var(--locked);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queue-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.queue-action {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 0.8rem;
+    border-radius: 14px;
+    color: var(--coral-text);
+}
+
+.queue-action:disabled {
+    color: var(--locked);
+}
+
+.queue-waiting-label {
+    margin: 16px 0 8px;
+}
+
+.queue-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.queue-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 6px 11px 13px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--card);
+}
+
+.queue-num {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--locked);
+    background: var(--line-soft);
+}
+
+.queue-row-main {
+    flex: 1;
+    min-width: 0;
+    color: inherit;
+}
+
+.queue-row-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.queue-ref {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.queue-snippet {
+    display: block;
+    font-family: var(--serif);
+    font-size: 0.84rem;
+    line-height: 1.35;
+    color: var(--locked);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queue-arrows {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+}
+
+.queue-arrow {
+    width: 38px;
+    height: 26px;
+    font-size: 0.6rem;
+    line-height: 1;
+    color: var(--soft);
+    padding: 0;
+}
+
+.queue-arrow:disabled {
+    opacity: 0.25;
+}
+
+/* Closing note under the list: slots refill themselves, one at a time. */
+.queue-refill-note {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1.5px solid var(--line-soft);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.45;
+    text-wrap: pretty;
+    color: var(--locked);
+}
+
+/* --- Bottom sheet --------------------------------------------------------- */
+
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: var(--lift);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: sheet-dim 200ms ease;
+}
+
+/* The panel slides up over the page and back down on the way out; the
+   backdrop fades with it. Both are driven by Sheet's `open` prop, which
+   keeps the sheet mounted until the exit has played. */
+.sheet {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    max-height: 85dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--cream);
+    border-radius: 26px 26px 0 0;
+    padding-top: 16px;
+    animation: sheet-rise 280ms cubic-bezier(0.32, 1.25, 0.6, 1);
+}
+
+/* The rise overshoots its resting spot by ~2% of the panel height. This skirt
+   carries the panel's surface below the screen edge so the spring never opens
+   a gap onto the backdrop and breaks the drawer illusion. */
+.sheet::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 8%;
+    background: var(--cream);
+}
+
+/* Distinct keyframe names on the way out: reusing a name that's already
+   running updates the timing in place instead of restarting it. */
+.sheet-closing {
+    animation: sheet-undim 240ms ease forwards;
+}
+
+.sheet-closing .sheet {
+    animation: sheet-fall 240ms cubic-bezier(0.4, 0, 0.9, 0.5) forwards;
+}
+
+@keyframes sheet-dim {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes sheet-undim {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes sheet-rise {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes sheet-fall {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(100%);
+    }
+}
+
+.sheet-handle {
+    flex: none;
+    width: 44px;
+    height: 5px;
+    border-radius: 99px;
+    background: var(--dash);
+    margin: 0 auto 16px;
+}
+
+/* Everything above the docked footer scrolls; the frame itself does not. */
+.sheet-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 22px calc(env(safe-area-inset-bottom) + 24px);
+}
+
+.sheet-body-docked {
+    padding-bottom: 4px;
+}
+
+.sheet-footer {
+    flex: none;
+    padding: 14px 22px calc(env(safe-area-inset-bottom) + 24px);
+    background: var(--cream);
+}
+
+/* Only when there's content disappearing under it. */
+.sheet-footer-cut {
+    border-top: 1.5px solid var(--line-soft);
+}
+
+.sheet-title {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+}
+
+.sheet-copy {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--soft);
+    margin-top: 7px;
+    line-height: 1.45;
+    text-wrap: pretty;
+}
+
+/* Option rows shared by the theme picker and the slot picker. */
+.theme-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 18px;
+    border: 1.5px solid var(--line);
+    background: var(--card);
+    text-align: left;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+.theme-option-on {
+    border-color: var(--coral);
+    background: var(--coral-wash);
+}
+
+/* The "no slot — just queue it" alternative. */
+.theme-option-alt:not(.theme-option-on) {
+    border-style: dashed;
+    border-color: var(--dash);
+    background: transparent;
+}
+
+.theme-option-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.theme-name {
+    display: block;
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.theme-option-on .theme-name {
+    color: var(--coral-text);
+}
+
+.theme-count {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--locked);
+    margin-top: 2px;
+}
+
+.theme-option-on .theme-count {
+    color: var(--coral-text);
+}
+
+.theme-mark {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--on-accent);
+    border: 1.5px solid var(--dash);
+    background: transparent;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.theme-mark-on {
+    background: var(--coral);
+    border-color: var(--coral);
+}
+
+/* Verse detail: the "want it sooner?" jump-the-line card. */
+.sooner-card {
+    padding: 17px 19px;
+    background: var(--amber-wash);
+    border: 1.5px solid var(--amber-line);
+    border-radius: 22px;
+}
+
+.sooner-copy {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--amber-text);
+    margin-top: 7px;
+    line-height: 1.45;
+    text-wrap: pretty;
+}
+
 /* --- Motion --------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

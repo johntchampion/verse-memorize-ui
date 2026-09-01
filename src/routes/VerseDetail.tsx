@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { UserVerse } from '../api/types'
+import Sheet from '../components/Sheet'
 import StageLadder from '../components/StageLadder'
 import TranslationTag from '../components/TranslationTag'
 import {
@@ -76,8 +78,18 @@ export default function VerseDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data, loading, error, refetch } = useApi(() => api.verse(id ?? ''))
+  // Slot occupants, for the "put it in a practice slot" picker.
+  const me = useApi(() => api.me())
 
-  if (loading) {
+  const [slotSheet, setSlotSheet] = useState(false)
+  // 1-3 = replace that slot; 0 = no slot, just make it next in the queue.
+  const [slotPick, setSlotPick] = useState<number | null>(null)
+  const [actionBusy, setActionBusy] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  // Only the first load takes over the screen. A refresh after an action
+  // keeps the current view up, so the sheet can play its exit over it.
+  if (loading && !data) {
     return (
       <main className='shell'>
         <p className='muted'>Loading…</p>
@@ -113,6 +125,36 @@ export default function VerseDetail() {
   // Attempts arrive newest first; the block strip reads oldest → newest.
   const blocks = [...recent].reverse()
 
+  // A non-null queue position means the verse is waiting its turn — not
+  // memorized, not holding a slot — so it can jump the line.
+  const queued = data.queuePosition !== null
+
+  // The pick and any error clear on the sheet's `onExited`, so they don't
+  // flicker away underneath the exit animation.
+  const closeSlotSheet = () => setSlotSheet(false)
+
+  const confirmSlotAction = () => {
+    if (slotPick === null || !verse) return
+    setActionBusy(true)
+    setActionError(null)
+    const action =
+      slotPick === 0
+        ? api.moveVerseToFront(verse.id)
+        : api.replaceSlot(verse.id, slotPick)
+    action
+      .then(() => {
+        closeSlotSheet()
+        refetch()
+        me.refetch()
+      })
+      .catch((err: unknown) => {
+        setActionError(
+          err instanceof Error ? err.message : 'Something went wrong.',
+        )
+      })
+      .finally(() => setActionBusy(false))
+  }
+
   return (
     <main className='shell stack'>
       <header className='screen-header' style={{ marginBottom: 0 }}>
@@ -133,16 +175,41 @@ export default function VerseDetail() {
           <p className='verse-ref'>{verse.reference}</p>
           {verse.text && <TranslationTag code={translation} />}
         </div>
-        {verse.text ? (
-          <p className='verse-text' style={{ lineHeight: 1.7 }}>
-            {verse.text}
-          </p>
-        ) : (
-          <p className='muted'>
-            This verse is still locked. Keep practicing to reach it.
+        <p className='verse-text' style={{ lineHeight: 1.7 }}>
+          {verse.text}
+        </p>
+        {data.themes.length > 0 && (
+          <p
+            className='small muted'
+            style={{ fontWeight: 700, marginTop: 12 }}
+          >
+            {data.themes.map((t) => t.name).join(' · ')}
           </p>
         )}
       </section>
+
+      {queued && (
+        <section className='sooner-card' aria-label='Practice this sooner'>
+          <div className='eyebrow' style={{ color: 'var(--amber-soft)' }}>
+            Want it sooner?
+          </div>
+          <p className='sooner-copy'>
+            {data.queuePosition === 1
+              ? 'It’s next in the queue — it takes the first slot that frees up.'
+              : `It’s #${data.queuePosition} in your queue. Put it straight into
+                practice, or make it the next verse in.`}
+          </p>
+          {actionError && <p className='error-text'>{actionError}</p>}
+          <button
+            className='btn'
+            style={{ marginTop: 13 }}
+            onClick={() => setSlotSheet(true)}
+            disabled={actionBusy}
+          >
+            Put it in a practice slot
+          </button>
+        </section>
+      )}
 
       {userVerse && (
         <section className='card' aria-label='Progress'>
@@ -167,7 +234,7 @@ export default function VerseDetail() {
             {progressCopy(userVerse)}
           </p>
 
-          {(schedule || graduatedAt || parked) && status !== 'locked' && (
+          {(schedule || graduatedAt || parked) && status !== 'not_started' && (
             <div className='stat-tiles' style={{ marginTop: 14 }}>
               {parked ? (
                 // Queued for relearning: unscheduled by design, so there is no
@@ -275,6 +342,99 @@ export default function VerseDetail() {
           </div>
         </section>
       )}
+
+      <Sheet
+        open={slotSheet}
+        label={`Put ${verse.reference} into practice`}
+        onClose={closeSlotSheet}
+        onExited={() => {
+          setSlotPick(null)
+          setActionError(null)
+        }}
+        footer={
+          <>
+            {actionError && <p className='error-text'>{actionError}</p>}
+            <button
+              className='btn'
+              disabled={actionBusy || slotPick === null}
+              onClick={confirmSlotAction}
+            >
+              {slotPick === null
+                ? 'Choose one'
+                : slotPick === 0
+                  ? 'Make it next in the queue'
+                  : `Swap it into slot ${slotPick}`}
+            </button>
+            <button
+              className='btn-quiet'
+              style={{ width: '100%', marginTop: 6 }}
+              onClick={closeSlotSheet}
+            >
+              Cancel
+            </button>
+          </>
+        }
+      >
+        <h2 className='sheet-title'>
+          Which verse steps aside for {verse.reference}?
+        </h2>
+        <p className='sheet-copy'>
+          Whichever you choose keeps its progress and comes back as the next
+          verse in the queue.
+        </p>
+        <div className='theme-list'>
+          {(me.data?.slots.active ?? []).map((slot) => {
+            const on = slotPick === slot.slot
+            return (
+              <button
+                key={slot.userVerseId}
+                className={on ? 'theme-option theme-option-on' : 'theme-option'}
+                onClick={() => setSlotPick(on ? null : slot.slot)}
+              >
+                <span className='theme-option-main'>
+                  <span className='theme-name'>
+                    {slot.reference ?? slot.verseId}
+                  </span>
+                  <span className='theme-count'>{STAGE_LABELS[slot.stage]}</span>
+                </span>
+                <span
+                  className={on ? 'theme-mark theme-mark-on' : 'theme-mark'}
+                  aria-hidden='true'
+                >
+                  {on ? '✓' : ''}
+                </span>
+              </button>
+            )
+          })}
+          {data.queuePosition !== 1 && (
+            <button
+              className={
+                slotPick === 0
+                  ? 'theme-option theme-option-alt theme-option-on'
+                  : 'theme-option theme-option-alt'
+              }
+              onClick={() => setSlotPick(slotPick === 0 ? null : 0)}
+            >
+              <span className='theme-option-main'>
+                <span className='theme-name'>
+                  None — put it first in the queue
+                </span>
+                <span className='theme-count'>
+                  Keeps all three going; starts the moment a slot frees up
+                </span>
+              </span>
+              <span
+                className={
+                  slotPick === 0 ? 'theme-mark theme-mark-on' : 'theme-mark'
+                }
+                aria-hidden='true'
+              >
+                {slotPick === 0 ? '✓' : ''}
+              </span>
+            </button>
+          )}
+        </div>
+      </Sheet>
     </main>
   )
 }

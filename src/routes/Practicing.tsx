@@ -63,6 +63,14 @@ export default function Practicing() {
   // Verses pulled out of review for repeated misses. They have no due date and
   // sit out of the session entirely until a slot opens up for them.
   const relearning = verses.data?.verses.filter((v) => v.needsRelearning) ?? []
+  // Everything waiting in the practice queue: not memorized, not in a slot.
+  const waiting =
+    verses.data?.verses.filter(
+      (v) =>
+        v.needsRelearning ||
+        v.status === 'not_started' ||
+        (v.status === 'active' && v.slot === null),
+    ).length ?? 0
 
   return (
     <>
@@ -117,6 +125,16 @@ export default function Practicing() {
             </p>
           </div>
         )}
+
+        <Link to='/queue' className='queue-link'>
+          <span className='queue-link-label'>See what&rsquo;s coming next</span>
+          <span className='queue-link-count'>
+            {waiting} {waiting === 1 ? 'verse' : 'verses'} waiting
+          </span>
+          <span className='queue-link-chev' aria-hidden='true'>
+            ›
+          </span>
+        </Link>
 
         {relearning.length > 0 && (
           <div className='relearn-card'>

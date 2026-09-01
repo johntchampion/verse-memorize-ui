@@ -16,7 +16,7 @@ export type Stage =
 
 export type ExerciseType = 'tile_fill_blank' | 'type_fill_blank'
 
-export type VerseStatus = 'locked' | 'active' | 'review' | 'mastered'
+export type VerseStatus = 'not_started' | 'active' | 'review' | 'mastered'
 
 /**
  * A `user_verse` row, returned verbatim. It holds both the learning-tier state
@@ -157,8 +157,7 @@ export interface VerseListItem {
   needsRelearning: boolean
   slot: number | null
   graduatedAt: string | null
-  /** null while the verse is locked — the API withholds the text. */
-  text: string | null
+  text: string
 }
 
 export interface VersesResponse {
@@ -173,8 +172,13 @@ export interface VerseDetailResponse {
     id: string
     reference: string
     order: number
-    text: string | null
+    text: string
   }
+  /** Themes this verse belongs to — possibly several, possibly none. */
+  themes: { id: string; name: string }[]
+  /** 1-based spot in the practice queue (1 = next up), or null when the verse
+      isn't queued — it's holding a slot or memorized. */
+  queuePosition: number | null
   status: VerseStatus
   graduatedAt: string | null
   userVerse: UserVerse | null
@@ -184,6 +188,42 @@ export interface VerseDetailResponse {
     total: number
     correct: number
   }
+}
+
+// GET /api/queue — the practice queue: every verse not memorized and not
+// currently holding a slot, in the order slot refill will consume them.
+export interface QueueVerse {
+  id: string
+  reference: string
+  order: number
+  text: string
+  /** Carries saved progress (swapped out of a slot, or relearning). */
+  inProgress: boolean
+  relearning: boolean
+  stage: Stage | null
+  themeIds: string[]
+}
+
+export interface QueueTheme {
+  id: string
+  name: string
+  /** Verses in the theme overall vs. still waiting in the queue. */
+  total: number
+  queuedCount: number
+}
+
+export interface QueueResponse {
+  translation: string
+  /** True once the user has stored a custom order. */
+  customized: boolean
+  queue: QueueVerse[]
+  themes: QueueTheme[]
+}
+
+// POST /api/slots/replace
+export interface SlotReplaceResponse extends QueueResponse {
+  placed: UserVerse
+  displaced: UserVerse | null
 }
 
 // GET /api/translations

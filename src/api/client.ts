@@ -3,8 +3,10 @@ import type {
   AuthResponse,
   ExerciseType,
   MeResponse,
+  QueueResponse,
   SessionCompleteResponse,
   SessionTodayResponse,
+  SlotReplaceResponse,
   TranslationsResponse,
   VerseDetailResponse,
   VersesResponse,
@@ -160,4 +162,41 @@ export const api = {
 
   verse: (id: string) =>
     request<VerseDetailResponse>(`/api/verses/${encodeURIComponent(id)}`),
+
+  // --- The practice queue ---------------------------------------------------
+
+  queue: () => request<QueueResponse>('/api/queue'),
+
+  /** Stores a custom queue order — the full list of queued verse ids. */
+  setQueueOrder: (verseIds: string[]) =>
+    request<QueueResponse>('/api/queue', {
+      method: 'PUT',
+      body: { verseIds },
+    }),
+
+  /** Back to the default order. */
+  resetQueue: () => request<QueueResponse>('/api/queue', { method: 'DELETE' }),
+
+  /** Moves a theme's queued verses to the front of the queue. The slots keep
+      what they're holding — they refill from the new front as they free up. */
+  moveThemeToTop: (themeId: string) =>
+    request<QueueResponse>('/api/queue/theme', {
+      method: 'POST',
+      body: { themeId },
+    }),
+
+  /** Moves one verse into the next-up spot at the front of the queue. */
+  moveVerseToFront: (verseId: string) =>
+    request<QueueResponse>('/api/queue/next', {
+      method: 'POST',
+      body: { verseId },
+    }),
+
+  /** Puts a verse straight into a chosen slot; the occupant steps aside with
+      its progress saved and rejoins the queue as next up. */
+  replaceSlot: (verseId: string, slot: number) =>
+    request<SlotReplaceResponse>('/api/slots/replace', {
+      method: 'POST',
+      body: { verseId, slot },
+    }),
 }

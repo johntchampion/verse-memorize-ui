@@ -5,6 +5,7 @@ import AllVerses from './routes/AllVerses';
 import Login from './routes/Login';
 import Onboarding from './routes/Onboarding';
 import Practicing from './routes/Practicing';
+import Queue from './routes/Queue';
 import Session from './routes/Session';
 import Settings from './routes/Settings';
 import Signup from './routes/Signup';
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/signup" element={<RedirectIfAuthed><Signup /></RedirectIfAuthed>} />
       <Route path="/" element={<RequireAuth fallback="/welcome"><Today /></RequireAuth>} />
       <Route path="/practicing" element={<RequireAuth><Practicing /></RequireAuth>} />
+      <Route path="/queue" element={<RequireAuth><Queue /></RequireAuth>} />
       <Route path="/all" element={<RequireAuth><AllVerses /></RequireAuth>} />
       <Route path="/session" element={<RequireAuth><Session /></RequireAuth>} />
       {/* The old verse-bank screen — now the All tab. */}

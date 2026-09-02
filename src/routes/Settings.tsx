@@ -152,24 +152,6 @@ export default function Settings() {
             </div>
           </div>
         </div>
-        <div className='stat-tiles' style={{ marginTop: 14 }}>
-          <div className='stat-tile'>
-            <div className='stat-tile-big'>{data.sessionsCompleted}</div>
-            <div className='stat-tile-label'>
-              {data.sessionsCompleted === 1 ? 'session' : 'sessions'}
-            </div>
-          </div>
-          <div className='stat-tile'>
-            <div className='stat-tile-big'>{data.versesStarted}</div>
-            <div className='stat-tile-label'>
-              {data.versesStarted === 1 ? 'verse started' : 'verses started'}
-            </div>
-          </div>
-          <div className='stat-tile'>
-            <div className='stat-tile-big'>{data.streak}</div>
-            <div className='stat-tile-label'>day streak</div>
-          </div>
-        </div>
       </section>
 
       <section className='card stack' aria-label='Translation'>

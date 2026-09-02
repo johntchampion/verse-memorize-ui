@@ -1289,13 +1289,6 @@ a:hover {
     color: var(--ink);
 }
 
-.stat-tile-big {
-    font-family: var(--serif);
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--amber-deep);
-}
-
 .stat-tile-label {
     font-size: 0.72rem;
     font-weight: 700;

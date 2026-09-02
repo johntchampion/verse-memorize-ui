@@ -172,7 +172,7 @@ export default function Queue() {
         >
           ←
         </button>
-        <h1>Up next</h1>
+        <h1>Up Next</h1>
         <span style={{ flex: 1 }} />
         <TranslationTag code={queue.data.translation} />
       </header>

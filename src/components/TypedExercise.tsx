@@ -8,6 +8,7 @@ interface Props {
   fullText: string
   translation: string
   isLast: boolean
+  pending: boolean
   onComplete: (correct: boolean) => void
 }
 
@@ -24,6 +25,7 @@ export default function TypedExercise({
   fullText,
   translation,
   isLast,
+  pending,
   onComplete,
 }: Props) {
   const [value, setValue] = useState('')
@@ -120,7 +122,10 @@ export default function TypedExercise({
             type='button'
             className='btn'
             onClick={() => onComplete(result === 'correct')}
+            disabled={pending}
+            aria-busy={pending}
           >
+            {pending && <span className='btn-spinner' aria-hidden='true' />}
             {isLast ? 'Finish session →' : 'Next verse →'}
           </button>
         </>

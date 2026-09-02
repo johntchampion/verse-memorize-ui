@@ -75,7 +75,11 @@ export default function Practicing() {
   return (
     <>
       <main className='shell shell-tabbed'>
-        <h1 className='view-title'>In Practice</h1>
+        <header className='screen-header' style={{ marginBottom: 0 }}>
+          <h1 className='view-title'>In Practice</h1>
+          <span style={{ flex: 1 }} />
+          {verses.data && <TranslationTag code={verses.data.translation} />}
+        </header>
         <p className='view-sub'>
           Three at a time. A verse graduates from In Practice once it&rsquo;s
           practiced correctly three times in a row for three days.
@@ -86,11 +90,6 @@ export default function Practicing() {
           style={{ gap: 12, marginTop: 20 }}
           aria-label='Learning slots'
         >
-          {verses.data && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <TranslationTag code={verses.data.translation} />
-            </div>
-          )}
           {Array.from({ length: slots.max }, (_, i) => {
             const slot = i + 1
             const verse = slots.active.find((v) => v.slot === slot) ?? null

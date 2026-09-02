@@ -23,6 +23,7 @@ interface Props {
   fullText: string
   translation: string
   isLast: boolean
+  pending: boolean
   onComplete: (correct: boolean) => void
 }
 
@@ -336,6 +337,7 @@ export default function TileExercise({
   fullText,
   translation,
   isLast,
+  pending,
   onComplete,
 }: Props) {
   const { chunks, blanks } = useMemo(
@@ -498,9 +500,11 @@ export default function TileExercise({
           type='button'
           className='btn'
           style={{ marginTop: 20 }}
-          disabled={!allBlanksFilled}
+          disabled={!allBlanksFilled || pending}
+          aria-busy={pending}
           onClick={() => onComplete(misses <= slipBudget)}
         >
+          {pending && <span className='btn-spinner' aria-hidden='true' />}
           {isLast ? 'Finish session →' : 'Next verse →'}
         </button>
       </div>

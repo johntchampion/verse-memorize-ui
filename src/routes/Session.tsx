@@ -406,6 +406,7 @@ export default function Session() {
           fullText={fullText}
           translation={translation}
           isLast={isLast}
+          pending={submitting}
           onComplete={(correct) => void submit(correct)}
         />
       ) : (
@@ -415,6 +416,7 @@ export default function Session() {
           fullText={fullText}
           translation={translation}
           isLast={isLast}
+          pending={submitting}
           onComplete={(correct) => void submit(correct)}
         />
       )}

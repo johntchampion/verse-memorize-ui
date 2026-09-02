@@ -73,7 +73,11 @@ export default function AllVerses() {
   return (
     <>
       <main className='shell shell-tabbed'>
-        <h1 className='view-title'>The Hundred</h1>
+        <header className='screen-header' style={{ marginBottom: 0 }}>
+          <h1 className='view-title'>The Hundred</h1>
+          <span style={{ flex: 1 }} />
+          <TranslationTag code={data.translation} />
+        </header>
         <p className='view-sub'>
           Every verse in the curriculum, in canon order.
         </p>
@@ -89,11 +93,8 @@ export default function AllVerses() {
             <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>
               {memorized} memorized · {practicing} in practice
             </span>
-            <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span className='small muted' style={{ fontWeight: 700 }}>
-                of {total}
-              </span>
-              <TranslationTag code={data.translation} />
+            <span className='small muted' style={{ fontWeight: 700 }}>
+              of {total}
             </span>
           </div>
           <div className='hundred-bar' aria-hidden='true'>

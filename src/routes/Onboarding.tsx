@@ -244,11 +244,11 @@ function SignupStep({ onSignIn }: { onSignIn: () => void }) {
             <h1 className='auth-title'>
               Create an account
               <br />
-              to start a streak.
+              to start.
             </h1>
             <p className='muted' style={{ fontWeight: 600 }}>
-              Start your streak today, and verse one of the hundred is ready.
-              Each returns right when you&rsquo;d start to forget it.
+              Your progress will be stored, and each session will be curated
+              just for you.
             </p>
           </div>
           <div className='field'>
@@ -314,7 +314,7 @@ function SignupStep({ onSignIn }: { onSignIn: () => void }) {
             disabled={submitting}
             style={{ marginTop: 14 }}
           >
-            {submitting ? 'Creating account…' : 'Start my streak'}
+            {submitting ? 'Creating account…' : 'Start memorizing'}
           </button>
         </div>
       </form>
@@ -344,27 +344,26 @@ export default function Onboarding() {
             <span>✓</span>
           </div>
           <h1 className='complete-title'>
-            That&rsquo;s one verse
+            You just practiced
             <br />
-            on its way in.
+            your first verse!
           </h1>
           <p className='complete-sub' style={{ textWrap: 'pretty' }}>
-            That was one verse. Walk through 100 of them so that at the end you
-            can recite core Christian doctrine.
+            That&rsquo;s all it takes — a few minutes a day. Keep going, and
+            you&rsquo;ll know all 100 by heart.
           </p>
 
           <div className='onboard-how'>
             <p className='eyebrow' style={{ color: 'var(--amber-soft)' }}>
-              How each verse goes in
+              The path to memorized
             </p>
             <StageLadder stage='learning_light' />
             <p
               className='small muted'
               style={{ fontWeight: 600, marginTop: 12, lineHeight: 1.45 }}
             >
-              Three right in a row moves a verse up and the blanks grow. Past
-              heavy it&rsquo;s memorized, and comes back on a widening schedule so it
-              stays. Three verses at a time — never a pile.
+              Hints fade as you improve, until you recite it unaided. Occasional
+              check-ins keep it stuck after that.
             </p>
           </div>
         </div>
@@ -387,7 +386,7 @@ export default function Onboarding() {
       <p className='onboard-brand'>Verse Memorize</p>
       <h1 className='onboard-title'>Memorize Bible Verses Every Day</h1>
       <p className='onboard-sub'>
-        Recite core Christian doctrine by referencing to scripture by memory.
+        A curated path through 100 verses behind core Christian doctrine.
       </p>
       <div style={{ marginTop: 26 }}>
         <TasterVerse filled={0} showCurrent={false} />

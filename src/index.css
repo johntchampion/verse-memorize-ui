@@ -1520,6 +1520,19 @@ a:hover {
 
 /* --- Onboarding (first-run cold open) ------------------------------------- */
 
+/*
+ * Each onboarding step sits in a different shared container (.shell,
+ * .complete-screen, .auth-shell, .onboard-hero) reused by other routes with
+ * their own padding/max-width, so the primary button ends up a different
+ * width per step. Normalize just the horizontal box on onboarding screens
+ * so the button doesn't visibly resize as the step changes.
+ */
+.onboard-step {
+    max-width: 480px;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
 .onboard-hero {
     max-width: 480px;
     min-height: 100dvh;

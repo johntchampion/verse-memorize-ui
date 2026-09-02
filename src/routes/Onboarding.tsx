@@ -125,7 +125,7 @@ function TasterStep({ onDone }: { onDone: () => void }) {
 
   return (
     <main
-      className='shell stack shell-full'
+      className='shell stack shell-full onboard-step'
       style={{ display: 'flex', flexDirection: 'column' }}
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -233,7 +233,7 @@ function SignupStep({ onSignIn }: { onSignIn: () => void }) {
   }
 
   return (
-    <main className='auth-shell'>
+    <main className='auth-shell onboard-step'>
       <form
         style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
         onSubmit={onSubmit}
@@ -338,7 +338,7 @@ export default function Onboarding() {
 
   if (step === 'aha') {
     return (
-      <main className='complete-screen'>
+      <main className='complete-screen onboard-step'>
         <div className='onboard-center' style={{ alignItems: 'center' }}>
           <div className='onboard-check' aria-hidden='true'>
             <span>✓</span>
@@ -382,7 +382,7 @@ export default function Onboarding() {
   if (step === 'signup') return <SignupStep onSignIn={toSignIn} />
 
   return (
-    <main className='onboard-hero'>
+    <main className='onboard-hero onboard-step'>
       <p className='onboard-brand'>Verse Memorize</p>
       <h1 className='onboard-title'>Memorize Bible Verses Every Day</h1>
       <p className='onboard-sub'>

@@ -122,9 +122,23 @@ export function showOneMoreTile(bank: BankWindow): BankWindow {
   }
 }
 
-export function heightOfRows(container: HTMLElement, tile: HTMLElement): number {
+/**
+ * Tile's box-shadow (the pressed lip) falls outside its offsetHeight, so the
+ * bottom row's shadow needs this much extra room or `.word-bank`'s
+ * `overflow: hidden` clips it.
+ */
+const TILE_SHADOW_HEIGHT = 3
+
+export function heightOfRows(
+  container: HTMLElement,
+  tile: HTMLElement,
+): number {
   const rowGap = parseFloat(getComputedStyle(container).rowGap) || 0
-  return BANK_ROWS * tile.offsetHeight + (BANK_ROWS - 1) * rowGap
+  return (
+    BANK_ROWS * tile.offsetHeight +
+    (BANK_ROWS - 1) * rowGap +
+    TILE_SHADOW_HEIGHT
+  )
 }
 
 export function countTilesInRows(tiles: HTMLElement[], rows: number): number {

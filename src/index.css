@@ -533,6 +533,9 @@ a:hover {
     /* TileExercise locks the height to exactly BANK_ROWS rows; tiles that
      wrap past the last row are trimmed by measurement, never shown. */
     overflow: hidden;
+    /* Room for the tile's box-shadow lip, which sits outside its layout box
+     and would otherwise be clipped by the overflow above. */
+    padding-bottom: 3px;
 }
 
 /*

@@ -74,6 +74,27 @@ export function parseExercise(
   })
 }
 
+/** A run of verse text, or one blank paired with its position in fill order. */
+export type VerseChunk =
+  | { kind: 'text'; text: string }
+  | { kind: 'blank'; blankIndex: number; blank: BlankSegment }
+
+/** `parseExercise`, with the blanks also collected in fill order. */
+export function splitIntoChunks(
+  blankedText: string,
+  fullText: string,
+): { chunks: VerseChunk[]; blanks: BlankSegment[] } {
+  const blanks: BlankSegment[] = []
+  const chunks = parseExercise(blankedText, fullText).map(
+    (segment): VerseChunk => {
+      if (segment.kind === 'text') return { kind: 'text', text: segment.raw }
+      blanks.push(segment)
+      return { kind: 'blank', blankIndex: blanks.length - 1, blank: segment }
+    },
+  )
+  return { chunks, blanks }
+}
+
 /** Curly quotes and apostrophes are the same character to a reader. */
 const canonWord = (w: string) => w.replace(/’/g, "'")
 
@@ -98,6 +119,16 @@ export function normalizeTypedText(text: string): string {
     .replace(/[^\p{L}\p{N}\s']/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Fisher-Yates, leaving the input alone. */
+export function shuffle<T>(items: T[]): T[] {
+  const out = [...items]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
 }
 
 /**
@@ -169,6 +200,26 @@ export const TILE_SLIP_PER_BLANKS = 20
 export function missTolerance(blankCount: number): number {
   return Math.floor(blankCount / TILE_SLIP_PER_BLANKS)
 }
+
+/**
+ * Whether the exercise drills the reference after the verse text.
+ *
+ * Every stage but the gentlest. `learning_light` is a first meeting with the
+ * words; asking where the verse lives before the words are there is two
+ * unlearned things at once.
+ */
+export function usesReferencePhase(stage: Stage): boolean {
+  return stage !== 'learning_light'
+}
+
+/**
+ * Wrong taps forgiven per reference step — one fat-finger tap each, three
+ * across the drill. Tracked against its own budget rather than the text's:
+ * `missTolerance` is a rate over blanks, and a 4-blank exercise earns no slip
+ * at all, so folding the two together would fail an attempt on a single
+ * mistapped book.
+ */
+export const REFERENCE_SLIP_PER_STEP = 1
 
 /**
  * Toast copy for whatever an attempt just did to the verse.

@@ -362,6 +362,14 @@ a:hover {
     font-weight: 800;
 }
 
+/* The stage and score chips share a row above the verse card. */
+.chip-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
 /* --- Verse typesetting (the signature) ---------------------------------- */
 
 .verse-card {
@@ -459,6 +467,52 @@ a:hover {
     }
 }
 
+/* --- Reference blanks (the second phase) --------------------------------- */
+
+/*
+ * The reference becomes three tap targets. A wrapping flex row keeps a long
+ * book name ("1 THESSALONIANS") from pushing the translation tag off the head
+ * row — the line wraps under itself instead.
+ */
+.ref-line {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    min-width: 0;
+    /* The phase scrolls this line to `block: 'start'`, which would otherwise
+       put it flush against the top edge with the card's own top cropped off. */
+    scroll-margin-top: 40px;
+}
+
+/*
+ * Fixed width per kind, not sized to the answer: three slots sit side by side
+ * here and a gap as wide as "1 Thessalonians" would name the book. The verse
+ * text's blanks keep their answer-sized gap on purpose — there the length is a
+ * cue the design commits to.
+ */
+.ref-slot {
+    min-width: 2.6ch;
+    text-align: center;
+}
+
+.ref-book.blank {
+    min-width: 8ch;
+}
+
+/* The 3px underline is set against 1.3rem serif; at the 0.85rem eyebrow it
+   reads as a rule rather than a blank. */
+.ref-line .blank {
+    border-bottom-width: 2px;
+}
+
+/* Chapter and verse read as one pair, so the colon must not wrap away. */
+.ref-locus {
+    display: inline-flex;
+    align-items: baseline;
+    white-space: nowrap;
+}
+
 /* --- Word bank tiles ----------------------------------------------------- */
 
 .bank-label {
@@ -479,6 +533,15 @@ a:hover {
     /* TileExercise locks the height to exactly BANK_ROWS rows; tiles that
      wrap past the last row are trimmed by measurement, never shown. */
     overflow: hidden;
+}
+
+/*
+ * The reference phase's chips. It bypasses the rolling window — six chips never
+ * need trimming — so the measured height is applied as a floor that holds the
+ * dock steady, not a ceiling that would clip a fourth row of long book names.
+ */
+.ref-bank {
+    overflow: visible;
 }
 
 .tile {
@@ -661,6 +724,22 @@ a:hover {
     color: var(--soft);
 }
 
+/* One line, so it borrows the textarea's treatment rather than repeating it. */
+.ref-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--coral);
+    border-radius: 16px;
+    background: var(--card-tint);
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    color: var(--ink);
+}
+
+.ref-input:focus {
+    outline: none;
+}
+
 .peek-row {
     display: flex;
     align-items: center;
@@ -724,6 +803,27 @@ a:hover {
     line-height: 1.6;
     color: var(--ink);
     margin-top: 10px;
+}
+
+/* The reference verdict, in the same eyebrow register as `.verse-ref`. */
+.result-reference {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--serif);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.result-correct .result-reference {
+    color: var(--green-text);
+}
+
+.result-incorrect .result-reference {
+    color: var(--coral-text);
 }
 
 /* --- Progress bar -------------------------------------------------------- */

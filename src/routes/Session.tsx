@@ -5,8 +5,8 @@ import type { SessionExercise } from '../api/types'
 import SessionComplete from '../components/session/SessionComplete'
 import SessionHeader from '../components/session/SessionHeader'
 import SessionSkeleton from '../components/session/SessionSkeleton'
-import TileExercise from '../components/TileExercise'
-import TypedExercise from '../components/TypedExercise'
+import TileExercise from '../components/session/TileExercise'
+import TypedExercise from '../components/session/TypedExercise'
 import { stageChangeMessage } from '../lib/exercise'
 import {
   attemptEvent,

@@ -121,6 +121,19 @@ backend tokenizer changes, `lib/exercise.ts` must change with it.**
 - _Typed exercises_ (`type_fill_blank`) are reached **only at `mastered`**. They
   validate on "Check": one free-text input compared against the full verse,
   forgiving case, punctuation, and whitespace (`normalizeTypedText`).
+- _The reference phase_ runs after the verse text on every stage but
+  `learning_light` (`usesReferencePhase`). The reference turns into
+  book/chapter/verse blanks and the tile bank becomes suggestions for each in
+  turn; typed exercises hide the reference and ask for it in a second input
+  (`referencesMatch`, which forgives abbreviations and roman numerals but not
+  the chapter or verse). The API sends `reference` as one opaque string, so the
+  split and the decoys are derived client-side in `lib/reference.ts` — a
+  reference that won't parse silently skips the phase.
+- Reference grading has its **own** budget of one wrong tap per step
+  (`REFERENCE_SLIP_PER_STEP`), checked alongside the text's rather than folded
+  into it: `missTolerance` is a rate over blanks, and a 4-blank exercise earns
+  no slip at all, so a shared budget would fail an attempt on one mistapped
+  book.
 - Session state (current index, taps so far) is purely local; only submitted
   attempts hit the server. Whatever `/api/attempt` reports surfaces as a brief
   toast and as a line on the completion screen — downgrades and relearning

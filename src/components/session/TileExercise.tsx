@@ -168,16 +168,20 @@ export default function TileExercise({
     }
   }, [bank, bankHeight, blanks, filledBlanks, labels])
 
-  // Keeps whatever has to be tapped next in view above the dock. Scrolling the
-  // reference line to the top is also what brings the finished verse back under
-  // it, so the words are there to be placed.
+  // Keeps whatever has to be tapped next in view above the dock. During the
+  // reference phase, scrolling the page to the very top (rather than just
+  // bringing the reference line to the dock's edge) is what brings the whole
+  // finished verse back into view above it, so the words are there to be placed.
   useEffect(() => {
-    const target = refStep ? refLineRef.current : currentBlankRef.current
+    if (refStep) {
+      const target = refLineRef.current
+      if (!target || !isOutOfView(target, dockRef.current)) return
+      window.scrollTo({ top: 0, behavior: scrollBehavior() })
+      return
+    }
+    const target = currentBlankRef.current
     if (!target || !isOutOfView(target, dockRef.current)) return
-    target.scrollIntoView({
-      block: refStep ? 'start' : 'center',
-      behavior: scrollBehavior(),
-    })
+    target.scrollIntoView({ block: 'center', behavior: scrollBehavior() })
   }, [filledBlanks, filledRefSteps, refStep])
 
   /** Callers add the miss to whichever counter their phase is graded on. */

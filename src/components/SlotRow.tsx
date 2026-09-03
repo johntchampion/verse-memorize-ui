@@ -1,14 +1,13 @@
 import { Link } from 'react-router-dom'
 import type { SlotVerse } from '../api/types'
+import { Skeleton, SkeletonText } from './Skeleton'
+import { truncate } from '../lib/verses'
 import {
   LEARNING_ORDER,
   STAGE_LABELS,
   TIER_ADVANCE_THRESHOLD,
   TIER_DOWNGRADE_THRESHOLD,
 } from '../lib/exercise'
-
-/** Snippet length that keeps the card to a single quoted line or two. */
-const SNIPPET_CHARS = 60
 
 interface Props {
   slot: number
@@ -19,12 +18,6 @@ interface Props {
   snippet: string | null
   /** The user's local date, for deciding whether a correct run is still live. */
   today: string
-}
-
-function truncate(text: string): string {
-  if (text.length <= SNIPPET_CHARS) return text
-  const cut = text.slice(0, SNIPPET_CHARS)
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 1))}…`
 }
 
 export default function SlotRow({
@@ -120,6 +113,32 @@ export default function SlotRow({
       <div>
         <div className='slot-locked-title'>Slot {slot}</div>
         <div className='slot-locked-copy'>{copy}</div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The occupied-slot card with its text replaced by placeholders. The advance
+ * rail renders for real in its empty state, so the card keeps its exact height
+ * and only the segments fill in when the verse arrives.
+ */
+export function SlotRowSkeleton() {
+  return (
+    <div className='slot-card'>
+      <div className='slot-card-head'>
+        <Skeleton variant='text' w='44%' h={15} />
+        <Skeleton variant='chip' w={78} h={20} />
+      </div>
+      {/* Two lines: the 60-character snippet wraps once at every phone width. */}
+      <p className='slot-snippet' aria-hidden='true'>
+        <SkeletonText lines={2} widths={['100%', '54%']} />
+      </p>
+      <div className='advance-row'>
+        {Array.from({ length: TIER_ADVANCE_THRESHOLD }, (_, i) => (
+          <span key={i} className='advance-seg' />
+        ))}
+        <Skeleton variant='text' w={104} h={10} style={{ margin: 0 }} />
       </div>
     </div>
   )

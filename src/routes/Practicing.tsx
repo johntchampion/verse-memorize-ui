@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import SlotRow from '../components/SlotRow'
-import TabBar from '../components/TabBar'
+import Screen from '../components/Screen'
 import TranslationTag from '../components/TranslationTag'
-import { useApi } from '../hooks/useApi'
-import { todayInTimezone } from '../lib/dates'
+import DueCard from '../components/practicing/DueCard'
+import QueueLink from '../components/practicing/QueueLink'
+import RelearnCard from '../components/practicing/RelearnCard'
+import SlotList from '../components/practicing/SlotList'
+import { combineApi, useApi } from '../hooks/useApi'
 
 /**
  * The Practicing tab: the learning slots, plus what's coming back for review
@@ -13,151 +14,35 @@ import { todayInTimezone } from '../lib/dates'
 export default function Practicing() {
   const me = useApi(() => api.me())
   // Verse texts feed the slot-card snippets; the review-due card comes from
-  // today's session. The screen renders without either if a fetch fails.
+  // today's session.
   const verses = useApi(() => api.verses())
   const session = useApi(() => api.sessionToday())
+  const all = combineApi(me, verses, session)
 
-  if (me.loading || verses.loading || session.loading) {
-    return (
-      <>
-        <main className='shell shell-tabbed'>
-          <p className='muted'>Loading…</p>
-        </main>
-        <TabBar />
-      </>
-    )
-  }
-
-  if (me.error || !me.data) {
-    return (
-      <>
-        <main className='shell shell-tabbed stack'>
-          <p className='error-text'>{me.error ?? 'Something went wrong.'}</p>
-          <button
-            className='btn-ghost'
-            onClick={() => {
-              me.refetch()
-              verses.refetch()
-              session.refetch()
-            }}
-          >
-            Try again
-          </button>
-        </main>
-        <TabBar />
-      </>
-    )
-  }
-
-  const { slots } = me.data
-  const textById = new Map(verses.data?.verses.map((v) => [v.id, v.text]) ?? [])
-  const dueCount = session.data
-    ? new Set(
-        session.data.exercises
-          .filter((e) => e.queue === 'review')
-          .map((e) => e.verseId),
-      ).size
-    : 0
-  // Day boundaries follow the profile's timezone, not the device's.
-  const today = todayInTimezone(me.data.user.timezone)
-  // Verses pulled out of review for repeated misses. They have no due date and
-  // sit out of the session entirely until a slot opens up for them.
-  const relearning = verses.data?.verses.filter((v) => v.needsRelearning) ?? []
-  // Everything waiting in the practice queue: not memorized, not in a slot.
-  const waiting =
-    verses.data?.verses.filter(
-      (v) =>
-        v.needsRelearning ||
-        v.status === 'not_started' ||
-        (v.status === 'active' && v.slot === null),
-    ).length ?? 0
+  // Hold every child to its skeleton until all three requests have settled,
+  // so the slots, due card and queue count don't pop in one at a time.
+  const ready = !all.pending
+  const profile = ready ? me.data : null
+  const verseList = ready ? (verses.data?.verses ?? null) : null
+  const sessionToday = ready ? session.data : null
 
   return (
-    <>
-      <main className='shell shell-tabbed'>
-        <header className='screen-header' style={{ marginBottom: 0 }}>
-          <h1 className='view-title'>In Practice</h1>
-          <span style={{ flex: 1 }} />
-          {verses.data && <TranslationTag code={verses.data.translation} />}
-        </header>
-        <p className='view-sub'>
-          Three at a time. A verse graduates from In Practice once it&rsquo;s
-          practiced correctly three times in a row for three days.
-        </p>
-
-        <section
-          className='stack'
-          style={{ gap: 12, marginTop: 20 }}
-          aria-label='Learning slots'
-        >
-          {Array.from({ length: slots.max }, (_, i) => {
-            const slot = i + 1
-            const verse = slots.active.find((v) => v.slot === slot) ?? null
-            return (
-              <SlotRow
-                key={slot}
-                slot={slot}
-                verse={verse}
-                unlocked={slots.unlocked}
-                snippet={verse ? (textById.get(verse.verseId) ?? null) : null}
-                today={today}
-              />
-            )
-          })}
-        </section>
-
-        {dueCount > 0 && (
-          <div className='due-card'>
-            <div className='eyebrow' style={{ color: 'var(--amber-soft)' }}>
-              Coming back today
-            </div>
-            <div className='due-row'>
-              <span className='due-count'>{dueCount}</span>
-              <span className='due-what'>
-                memorized {dueCount === 1 ? 'verse' : 'verses'} due for full
-                recall
-              </span>
-            </div>
-            <p className='due-copy'>
-              They return right when you&rsquo;d start to forget. Included in
-              today&rsquo;s session.
-            </p>
-          </div>
-        )}
-
-        <Link to='/queue' className='queue-link'>
-          <span className='queue-link-label'>See what&rsquo;s coming next</span>
-          <span className='queue-link-count'>
-            {waiting} {waiting === 1 ? 'verse' : 'verses'} waiting
-          </span>
-          <span className='queue-link-chev' aria-hidden='true'>
-            ›
-          </span>
-        </Link>
-
-        {relearning.length > 0 && (
-          <div className='relearn-card'>
-            <div className='eyebrow' style={{ color: 'var(--coral-text)' }}>
-              Waiting for a slot
-            </div>
-            <p className='relearn-copy'>
-              {relearning.length === 1 ? 'This one' : 'These'} slipped in review
-              and {relearning.length === 1 ? 'comes' : 'come'} back to practice
-              once a slot frees up — that happens when another verse graduates.
-            </p>
-            <ul className='relearn-list'>
-              {relearning.map((verse) => (
-                <li key={verse.id}>
-                  <Link to={`/verses/${verse.id}`} className='relearn-ref'>
-                    {verse.reference}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </main>
-      <TabBar />
-    </>
+    <Screen
+      layout='tabbed'
+      title={<h1 className='view-title'>In Practice</h1>}
+      trailing={<TranslationTag code={verses.data?.translation ?? null} />}
+      sub='Three at a time. A verse graduates from In Practice once it’s practiced correctly three times in a row for three days.'
+      loading={all.pending}
+      loadingLabel='Loading your practice slots…'
+      // Only the profile is load-bearing. A failed verse or session fetch
+      // costs a snippet or a card, not the screen, so it isn't passed on.
+      error={me.error}
+      onRetry={all.refetch}
+    >
+      <SlotList profile={profile} verses={verseList} />
+      <DueCard session={sessionToday} />
+      <QueueLink verses={verseList} />
+      <RelearnCard verses={verseList} />
+    </Screen>
   )
 }

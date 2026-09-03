@@ -2118,6 +2118,66 @@ a:hover {
     text-wrap: pretty;
 }
 
+/* --- Skeletons ------------------------------------------------------------ */
+
+/*
+ * Loading placeholders. A screen renders its real chrome and layout straight
+ * away and drops these where the data will land, so nothing moves when it
+ * arrives. The fill is --track — the same rail colour behind the progress bar
+ * and the hundred bar — so placeholders read as part of the system in both
+ * themes.
+ */
+
+.sk {
+    display: block;
+    background: var(--track);
+    border-radius: 8px;
+    animation: sk-pulse 1.2s ease-in-out infinite alternate;
+}
+
+/* Sized off the surrounding font so a text placeholder keeps the line rhythm
+   of the copy it stands in for: 0.72em of ink centred in a 1.5em line box, the
+   body's line-height. SkeletonText lays its lines out with flex so these
+   margins can't collapse into each other. */
+.sk-text {
+    border-radius: 6px;
+    height: 0.72em;
+    margin: 0.39em 0;
+    flex: none;
+}
+
+.sk-circle {
+    border-radius: 50%;
+}
+
+.sk-chip {
+    border-radius: 99px;
+}
+
+@keyframes sk-pulse {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0.45;
+    }
+}
+
+/* --- Screen-reader utilities ---------------------------------------------- */
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* --- Motion --------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -2127,5 +2187,13 @@ a:hover {
     *::after {
         animation-duration: 0.01ms !important;
         transition-duration: 0.01ms !important;
+    }
+
+    /* The blanket rule above only shortens the duration; an infinite alternate
+       animation would still resample its phase every frame and strobe. Skeletons
+       need a real resting state. */
+    .sk {
+        animation: none !important;
+        opacity: 0.7;
     }
 }

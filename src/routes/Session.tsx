@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type {
-  AttemptOutcome,
-  SessionExercise,
-  Stage,
-  UserVerse,
-} from '../api/types'
-import ProgressBar from '../components/ProgressBar'
+import type { SessionExercise } from '../api/types'
+import SessionComplete from '../components/session/SessionComplete'
+import SessionHeader from '../components/session/SessionHeader'
+import SessionSkeleton from '../components/session/SessionSkeleton'
 import TileExercise from '../components/TileExercise'
 import TypedExercise from '../components/TypedExercise'
+import { stageChangeMessage } from '../lib/exercise'
 import {
-  LEARNING_ORDER,
-  STAGE_LABELS,
-  stageChangeMessage,
-} from '../lib/exercise'
+  attemptEvent,
+  slotFilledEvent,
+  type SessionEvent,
+} from '../lib/sessionEvents'
 
 type Phase = 'loading' | 'empty' | 'running' | 'finishing' | 'done'
 
@@ -23,114 +21,7 @@ interface ErrorState {
   retry: () => void
 }
 
-/** A moment worth celebrating on the completion screen. */
-interface SessionEvent {
-  icon: string
-  iconBg: string
-  title: string
-  detail: string
-  detailColor: string
-}
-
 const TOAST_MS = 2500
-
-/**
- * Everything an attempt moved, worth recapping on the completion screen —
- * losses as well as wins. A session that quietly dropped a verse a tier should
- * say so; that's how the day-to-day rules become learnable.
- */
-function attemptEvent(
-  reference: string,
-  from: Stage,
-  outcome: AttemptOutcome,
-): SessionEvent | null {
-  const to = outcome.userVerse.stage
-
-  // Parked for relearning. The stage itself is unchanged when no slot was
-  // free, so this has to be checked before any stage comparison.
-  if (outcome.userVerse.needs_relearning === 1) {
-    return {
-      icon: '↺',
-      iconBg: 'var(--coral-wash)',
-      title: reference,
-      detail: 'Slipped twice — waiting for a slot',
-      detailColor: 'var(--coral-text)',
-    }
-  }
-
-  // Demoted out of review straight into a free slot.
-  if (from === 'review' && to === 'learning_heavy') {
-    return {
-      icon: '↺',
-      iconBg: 'var(--coral-wash)',
-      title: reference,
-      detail: 'Back to practice at heavy blanks',
-      detailColor: 'var(--coral-text)',
-    }
-  }
-
-  if (from === to) return null
-
-  const fromTier = LEARNING_ORDER.indexOf(from)
-  const toTier = LEARNING_ORDER.indexOf(to)
-  if (fromTier !== -1 && toTier !== -1) {
-    const up = toTier > fromTier
-    return {
-      icon: up ? '↑' : '↓',
-      iconBg: 'var(--coral-wash)',
-      title: reference,
-      detail: `${STAGE_LABELS[from]} → ${STAGE_LABELS[to]}`,
-      detailColor: 'var(--coral-text)',
-    }
-  }
-
-  if (to === 'review') {
-    // From heavy this is graduation; otherwise it's mastery lost.
-    const graduated = from === 'learning_heavy'
-    return {
-      icon: graduated ? '✓' : '↓',
-      iconBg: graduated ? 'var(--green-wash)' : 'var(--coral-wash)',
-      title: reference,
-      detail: graduated
-        ? 'Graduated — now in review'
-        : 'Lost mastery — back in review',
-      detailColor: graduated ? 'var(--green-text)' : 'var(--coral-text)',
-    }
-  }
-
-  if (to === 'mastered') {
-    return {
-      icon: '✓',
-      iconBg: 'var(--green-wash)',
-      title: reference,
-      detail: 'Mastered — fully memorized',
-      detailColor: 'var(--green-text)',
-    }
-  }
-
-  return null
-}
-
-/**
- * A slot that just filled. A row carrying a `graduated_at` has been through
- * learning before — it's a verse coming back, not a new one arriving.
- */
-function slotFilledEvent(row: UserVerse): SessionEvent {
-  const returning = row.graduated_at !== null
-  return {
-    icon: returning ? '↺' : '🔓',
-    iconBg: returning ? 'var(--coral-wash)' : 'var(--amber-wash)',
-    title: returning
-      ? 'A verse returns to practice'
-      : row.slot !== null
-        ? `Slot ${row.slot} unlocked`
-        : 'New verse unlocked',
-    detail: returning
-      ? 'Picked up the open slot at heavy blanks'
-      : 'A new verse joins your practice',
-    detailColor: returning ? 'var(--coral-text)' : 'var(--amber-soft)',
-  }
-}
 
 /**
  * The exercise runner. Holds today's queue in local state and steps through
@@ -290,11 +181,17 @@ export default function Session() {
     )
   }
 
-  if (phase === 'loading' || phase === 'finishing') {
+  if (phase === 'loading') {
+    return <SessionSkeleton />
+  }
+
+  // Not a load of content but a submit after it: there is nothing left on
+  // screen to hold a placeholder's shape.
+  if (phase === 'finishing') {
     return (
       <main className='shell'>
-        <p className='muted'>
-          {phase === 'loading' ? 'Preparing today’s session…' : 'Wrapping up…'}
+        <p className='muted' role='status'>
+          Wrapping up…
         </p>
       </main>
     )
@@ -314,64 +211,15 @@ export default function Session() {
   }
 
   if (phase === 'done' && completion) {
-    const verseCount = new Set(queue.map((e) => e.verseId)).size
-    const cleanNote =
-      correctCount === queue.length
-        ? 'a clean sweep'
-        : correctCount > 0
-          ? `zero misses on ${correctCount} of them`
-          : 'every miss still teaches'
     return (
-      <main className='complete-screen'>
-        {completion.streak !== null && (
-          <>
-            <div className='complete-circle'>
-              <span className='complete-circle-count'>{completion.streak}</span>
-            </div>
-            <div className='complete-eyebrow'>Day streak</div>
-          </>
-        )}
-        <h1 className='complete-title'>Kept the day.</h1>
-        <p className='complete-sub'>
-          {queue.length} {queue.length === 1 ? 'exercise' : 'exercises'} ·{' '}
-          {verseCount} {verseCount === 1 ? 'verse' : 'verses'} · {cleanNote}
-        </p>
-
-        {events.length > 0 && (
-          <div className='complete-events'>
-            {events.map((event, i) => (
-              <div key={i} className='complete-event'>
-                <span
-                  className='complete-event-icon'
-                  style={{ background: event.iconBg }}
-                  aria-hidden='true'
-                >
-                  {event.icon}
-                </span>
-                <div>
-                  <div className='complete-event-title'>{event.title}</div>
-                  <div
-                    className='complete-event-detail'
-                    style={{ color: event.detailColor }}
-                  >
-                    {event.detail}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!completion.recorded && (
-          <p className='small complete-sub'>
-            Today&rsquo;s session was already counted — extra practice never
-            hurts.
-          </p>
-        )}
-        <Link to='/' className='btn' style={{ marginTop: 22 }}>
-          Back home
-        </Link>
-      </main>
+      <SessionComplete
+        streak={completion.streak}
+        recorded={completion.recorded}
+        exercises={queue.length}
+        verses={new Set(queue.map((e) => e.verseId)).size}
+        correct={correctCount}
+        events={events}
+      />
     )
   }
 
@@ -387,17 +235,7 @@ export default function Session() {
         </div>
       )}
 
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link to='/' className='icon-btn' aria-label='Exit session'>
-          ✕
-        </Link>
-        <div style={{ flex: 1 }}>
-          <ProgressBar done={index} total={queue.length} />
-        </div>
-        <span className='progress-count'>
-          {index + 1}/{queue.length}
-        </span>
-      </header>
+      <SessionHeader done={index} total={queue.length} />
 
       {exercise.exerciseType === 'tile_fill_blank' ? (
         <TileExercise

@@ -11,6 +11,7 @@ import {
 } from '../../lib/exercise'
 import {
   BANK_ROWS,
+  LOOKAHEAD_BLANKS,
   countTilesInRows,
   heightOfRows,
   replaceTappedTile,
@@ -160,9 +161,10 @@ export default function TileExercise({
     if (capacity < bank.onScreen.length) {
       isRotating.current = true
       windowIsFull.current = true
-      setBank(
-        trimToCapacity(bank, capacity, labels, blanks[filledBlanks]?.answer),
-      )
+      const needed = blanks
+        .slice(filledBlanks, filledBlanks + 1 + LOOKAHEAD_BLANKS)
+        .map((blank) => blank.answer)
+      setBank(trimToCapacity(bank, capacity, labels, needed))
     } else if (bank.offScreen.length > 0 && !windowIsFull.current) {
       setBank(showOneMoreTile(bank))
     }
@@ -208,7 +210,9 @@ export default function TileExercise({
 
     windowIsFull.current = false
     if (isRotating.current) {
-      const upcoming = blanks[filledBlanks + 1]?.answer
+      const upcoming = blanks
+        .slice(filledBlanks + 1, filledBlanks + 1 + LOOKAHEAD_BLANKS)
+        .map((blank) => blank.answer)
       setBank((current) =>
         replaceTappedTile(current, position, upcoming, nextLabels),
       )

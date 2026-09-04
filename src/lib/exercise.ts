@@ -131,6 +131,11 @@ export function shuffle<T>(items: T[]): T[] {
   return out
 }
 
+/** A random index into an array of this length (or one past the end, for insertion). */
+export function randomIndex(exclusiveMax: number): number {
+  return Math.floor(Math.random() * exclusiveMax)
+}
+
 /**
  * Progression thresholds, mirrored from the API's `stageMachine.ts`. They are
  * display-only here — the server is the authority on every transition — but

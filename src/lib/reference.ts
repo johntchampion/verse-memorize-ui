@@ -176,8 +176,11 @@ export function bookChoices(book: string, count = 5): string[] {
  * Distinct positive numbers around `answer` — `answer` included — ascending.
  *
  * Sorted rather than shuffled: numbers do have a natural order, so scattering
- * them only forces scanning, and the sorted position of the answer says
- * nothing about which one it is.
+ * them only forces scanning. But which offsets get picked is shuffled first —
+ * otherwise "nearest below, then nearest above, then next below, ..." always
+ * split the same way, and the sorted answer would land at the same index
+ * every time (index 2 of 6 for anything not near the low boundary), which is
+ * exactly the kind of tell sorting was meant to avoid.
  */
 function numbersAround(
   answer: number,
@@ -185,7 +188,7 @@ function numbersAround(
   count: number,
 ): number[] {
   const picks = [answer]
-  for (const offset of offsets) {
+  for (const offset of shuffle([...offsets])) {
     if (picks.length >= count) break
     const candidate = answer + offset
     if (candidate >= 1 && !picks.includes(candidate)) picks.push(candidate)

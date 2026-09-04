@@ -1,4 +1,4 @@
-import { wordsMatch, wordsMatchExactly } from './exercise'
+import { randomIndex, wordsMatch, wordsMatchExactly } from './exercise'
 
 /**
  * The word bank's rolling window.
@@ -65,48 +65,92 @@ export function withAnswerSpelling(
   return traded
 }
 
-/** Sends tiles past `capacity` off screen, keeping `neededAnswer` in view. */
+/**
+ * Sends tiles past `capacity` off screen, keeping `neededAnswers` (the
+ * current blank, then a lookahead buffer) in view from the start — the same
+ * guarantee `replaceTappedTile` keeps up as taps roll the window forward.
+ * Without this, only the very first blank was guaranteed visible at mount, so
+ * the first several taps leaned on `replaceTappedTile`'s hard "rescue the
+ * immediate answer" path far more than later ones did — exactly the path
+ * that hands the answer away.
+ */
 export function trimToCapacity(
   bank: BankWindow,
   capacity: number,
   labels: string[],
-  neededAnswer: string | undefined,
+  neededAnswers: readonly string[],
 ): BankWindow {
   const onScreen = bank.onScreen.slice(0, capacity)
   const overflow = bank.onScreen.slice(capacity)
 
-  if (
-    neededAnswer !== undefined &&
-    onScreen.length > 0 &&
-    !includesSpellingOf(onScreen, labels, neededAnswer)
-  ) {
-    const rescue = positionOfBestTile(overflow, labels, neededAnswer)
-    if (rescue !== -1) {
-      const last = onScreen.length - 1
-      ;[onScreen[last], overflow[rescue]] = [overflow[rescue], onScreen[last]]
+  // Positions already spoken for this pass, whether by a pre-existing match
+  // or a rescue below — a later, lower-priority rescue must never overwrite
+  // one, or it would evict the tile an earlier answer just claimed.
+  const claimed = new Set<number>()
+  let slot = onScreen.length - 1
+
+  for (const answer of neededAnswers) {
+    const already = onScreen.findIndex(
+      (id, at) => !claimed.has(at) && wordsMatchExactly(labels[id], answer),
+    )
+    if (already !== -1) {
+      claimed.add(already)
+      continue
     }
+
+    while (slot >= 0 && claimed.has(slot)) slot--
+    if (slot < 0) break
+
+    const rescue = positionOfBestTile(overflow, labels, answer)
+    if (rescue === -1) continue
+
+    ;[onScreen[slot], overflow[rescue]] = [overflow[rescue], onScreen[slot]]
+    claimed.add(slot)
+    slot--
   }
 
   return { onScreen, offScreen: [...overflow, ...bank.offScreen] }
 }
 
-/** Swaps the tapped tile for an off-screen one that keeps play going. */
+/** How many blanks ahead to opportunistically pre-load a tile for, beyond
+ *  the one the very next tap requires. Large enough that a freshly-drawn
+ *  tile is rarely provably "the" answer; small enough it isn't half the
+ *  verse. */
+export const LOOKAHEAD_BLANKS = 6
+
+/**
+ * Swaps the tapped tile for an off-screen one that keeps play going. Only the
+ * very next answer is a hard requirement — everything past it is drawn from
+ * a random pick among the next `LOOKAHEAD_BLANKS` answers that aren't yet on
+ * screen, rather than always the nearest one. Otherwise the tile rescued for
+ * the immediate next answer (the common case in a review bank, where most of
+ * it is off screen at any moment) would reliably be exactly the word the user
+ * needs next, telling them the answer without their having to read it.
+ */
 export function replaceTappedTile(
   bank: BankWindow,
   tappedPosition: number,
-  upcomingAnswer: string | undefined,
+  upcomingAnswers: readonly string[],
   labels: string[],
 ): BankWindow {
   const remaining = bank.onScreen.filter((_, at) => at !== tappedPosition)
   if (bank.offScreen.length === 0) return { onScreen: remaining, offScreen: [] }
 
+  const [immediate, ...lookahead] = upcomingAnswers
   let drawAt = 0
+
   if (
-    upcomingAnswer !== undefined &&
-    !includesSpellingOf(remaining, labels, upcomingAnswer)
+    immediate !== undefined &&
+    !includesSpellingOf(remaining, labels, immediate)
   ) {
-    const rescue = positionOfBestTile(bank.offScreen, labels, upcomingAnswer)
+    const rescue = positionOfBestTile(bank.offScreen, labels, immediate)
     if (rescue !== -1) drawAt = rescue
+  } else {
+    const missing = lookahead
+      .filter((answer) => !includesSpellingOf(remaining, labels, answer))
+      .map((answer) => positionOfBestTile(bank.offScreen, labels, answer))
+      .filter((position) => position !== -1)
+    if (missing.length > 0) drawAt = missing[randomIndex(missing.length)]
   }
 
   const onScreen = [...bank.onScreen]

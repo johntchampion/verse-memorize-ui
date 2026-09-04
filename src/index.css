@@ -1991,102 +1991,94 @@ a:hover {
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    animation: sheet-dim 200ms ease;
+    /* Fades with the sheet's arrival and departure only — a half-dragged
+       sheet still sits over a fully dimmed page. Sheet.tsx flips the value;
+       it starts clear so the first frame has something to fade from. */
+    opacity: 0;
+    transition: opacity 220ms ease;
 }
 
-/* The panel slides up over the page and back down on the way out; the
-   backdrop fades with it. Both are driven by Sheet's `open` prop, which
-   keeps the sheet mounted until the exit has played. */
+/* The panel's transform belongs to the spring in Sheet.tsx — nothing here
+   animates it, so a drag can interrupt it at any point. */
 .sheet {
     position: relative;
     width: 100%;
     max-width: 520px;
-    max-height: 85dvh;
     display: flex;
     flex-direction: column;
     background: var(--cream);
     border-radius: 26px 26px 0 0;
-    padding-top: 16px;
-    animation: sheet-rise 280ms cubic-bezier(0.32, 1.25, 0.6, 1);
+    will-change: transform;
 }
 
-/* The rise overshoots its resting spot by ~2% of the panel height. This skirt
-   carries the panel's surface below the screen edge so the spring never opens
-   a gap onto the backdrop and breaks the drawer illusion. */
+.sheet:focus {
+    outline: none;
+}
+
+/* Hugs its content; the cap is what keeps a long list from filling the screen. */
+.sheet-auto {
+    max-height: 85dvh;
+}
+
+/* Parks at a fixed height instead, so a list that changes length doesn't
+   resize the frame under your finger. */
+.sheet-tall {
+    height: 85dvh;
+}
+
+.sheet-full {
+    height: 95dvh;
+}
+
+/* No handle to space the content off the top edge. */
+.sheet-plain {
+    padding-top: 22px;
+}
+
+/* The spring overshoots on the way up and the drag can lift the panel off its
+   rest position. This skirt carries the panel's surface below the screen edge
+   so neither ever opens a gap onto the backdrop. */
 .sheet::after {
     content: '';
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    height: 8%;
+    height: 120px;
     background: var(--cream);
 }
 
-/* Distinct keyframe names on the way out: reusing a name that's already
-   running updates the timing in place instead of restarting it. */
-.sheet-closing {
-    animation: sheet-undim 240ms ease forwards;
+/* The pill is 5px tall; this is the part you can actually hit. */
+.sheet-grip {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 37px;
+    cursor: grab;
+    touch-action: none;
 }
 
-.sheet-closing .sheet {
-    animation: sheet-fall 240ms cubic-bezier(0.4, 0, 0.9, 0.5) forwards;
-}
-
-@keyframes sheet-dim {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes sheet-undim {
-    from {
-        opacity: 1;
-    }
-
-    to {
-        opacity: 0;
-    }
-}
-
-@keyframes sheet-rise {
-    from {
-        transform: translateY(100%);
-    }
-
-    to {
-        transform: translateY(0);
-    }
-}
-
-@keyframes sheet-fall {
-    from {
-        transform: translateY(0);
-    }
-
-    to {
-        transform: translateY(100%);
-    }
+.sheet-grip:active {
+    cursor: grabbing;
 }
 
 .sheet-handle {
-    flex: none;
     width: 44px;
     height: 5px;
     border-radius: 99px;
     background: var(--dash);
-    margin: 0 auto 16px;
 }
 
-/* Everything above the docked footer scrolls; the frame itself does not. */
+/* Everything above the docked footer scrolls; the frame itself does not.
+   `contain` stops a flick that runs out of content from scrolling the page
+   behind, and pan-y leaves the drag free to take over at the top. */
 .sheet-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     padding: 0 22px calc(env(safe-area-inset-bottom) + 24px);
 }
 
@@ -2098,6 +2090,7 @@ a:hover {
     flex: none;
     padding: 14px 22px calc(env(safe-area-inset-bottom) + 24px);
     background: var(--cream);
+    touch-action: none;
 }
 
 /* Only when there's content disappearing under it. */

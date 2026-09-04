@@ -1,5 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, type Location } from 'react-router-dom';
 import { tokenIsExpired } from './api/client';
+import NavStack from './components/NavStack';
 import { useAuth } from './context/auth';
 import AllVerses from './routes/AllVerses';
 import Login from './routes/Login';
@@ -27,9 +28,12 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   return children;
 }
 
-export default function App() {
+/** Matched against the location it is handed rather than the current one, so
+    the screen being animated away keeps rendering itself — and keeps its own
+    params — while it slides off. */
+function AppRoutes({ location }: { location: Location }) {
   return (
-    <Routes>
+    <Routes location={location}>
       <Route path="/welcome" element={<RedirectIfAuthed><Onboarding /></RedirectIfAuthed>} />
       <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
       <Route path="/signup" element={<RedirectIfAuthed><Signup /></RedirectIfAuthed>} />
@@ -45,4 +49,8 @@ export default function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
+}
+
+export default function App() {
+  return <NavStack render={(location) => <AppRoutes location={location} />} />;
 }

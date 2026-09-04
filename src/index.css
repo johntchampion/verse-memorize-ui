@@ -2322,6 +2322,64 @@ a:hover {
     border: 0;
 }
 
+/* --- Screen push / pop ---------------------------------------------------- */
+
+/*
+ * Out of transit these three are plain block boxes: the page lays out and
+ * scrolls exactly as it would without them. That is load-bearing, not tidiness.
+ * A transform on any of them — or even a bare `will-change: transform` — makes
+ * it the containing block for every `position: fixed` descendant, which here is
+ * the tab bar and the toast. So all the positioning below is scoped to
+ * `.nav-transit`, added when the spring starts and torn off when it lands.
+ *
+ * During the transition each layer *does* become that containing block, which
+ * is what carries the tab bar off to the left with the screen it belongs to —
+ * the same thing iOS does when a pushed screen hides the bottom bar.
+ */
+
+.nav-transit {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    /* Below the sheets, which portal to the body and stay above all of this. */
+    z-index: 1;
+}
+
+.nav-transit .nav-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    will-change: transform;
+    /* Opaque, or the two screens read through each other as they cross. */
+    background: var(--cream);
+}
+
+/* Neither screen has a scroll position of its own out of flow, so each one is
+   offset to the place it was last showing. */
+.nav-transit .nav-layer-inner {
+    position: absolute;
+    left: 0;
+    right: 0;
+}
+
+.nav-transit .nav-layer[data-role='under'] {
+    z-index: 0;
+}
+
+.nav-transit .nav-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.nav-transit .nav-layer[data-role='over'] {
+    z-index: 2;
+    box-shadow: -10px 0 30px rgb(0 0 0 / 0.13);
+}
+
 /* --- Motion --------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

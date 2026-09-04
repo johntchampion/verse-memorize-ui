@@ -1840,6 +1840,10 @@ a:hover {
     color: inherit;
 }
 
+.queue-slot-row:hover {
+    color: inherit;
+}
+
 .queue-slot-dot {
     flex: none;
     width: 7px;
@@ -1923,6 +1927,10 @@ a:hover {
 .queue-row-main {
     flex: 1;
     min-width: 0;
+    color: inherit;
+}
+
+.queue-row-main:hover {
     color: inherit;
 }
 

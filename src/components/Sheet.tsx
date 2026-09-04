@@ -59,6 +59,22 @@ interface Drag {
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/** A mounted sheet, as the ones above and below it need to see it. */
+interface Layer {
+  overlay: HTMLElement
+  /** Recede, because another sheet has just opened over this one. */
+  cover: (covered: boolean) => void
+}
+
+/** Every mounted sheet, deepest first. Sheets portal to the body, so `inert` on
+    the app root says nothing about them: a sheet opened over another has to
+    silence the one it covers itself, and only the top of the stack owns Escape —
+    otherwise one key closes the whole pile. The stack is also the depth cue:
+    each sheet stands a little shorter than the one below it, and the one below
+    shrinks back, so a stack reads as cards rather than as one card swapped for
+    another in the same rectangle. */
+const stack: Layer[] = []
+
 /**
  * Bottom sheet over a dimmed backdrop — drag it down, tap outside, or press
  * Escape to dismiss. It springs up over the page and follows your finger 1:1 on
@@ -79,13 +95,23 @@ export default function Sheet({
   // `open` leads, `mounted` trails it until the exit spring comes to rest.
   const [mounted, setMounted] = useState(open)
   const [prevOpen, setPrevOpen] = useState(open)
+  // How many sheets this one is opening over, read as it opens: the sheets
+  // below registered in earlier commits, so the count is settled by now, and
+  // taking it here means the height is right before the panel is ever measured.
+  const [depth, setDepth] = useState(() => (open ? stack.length : 0))
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) setMounted(true)
+    if (open) {
+      setMounted(true)
+      setDepth(stack.length)
+    }
   }
 
   // The divider only earns its place once the body actually scrolls.
   const [scrolls, setScrolls] = useState(false)
+
+  // Set by the sheet that opens over this one, on its way in and out.
+  const [covered, setCovered] = useState(false)
 
   const overlayRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -100,6 +126,9 @@ export default function Sheet({
   const draggedRef = useRef(false)
   /** Both ends of a backdrop tap have to land on the backdrop. */
   const downOnBackdrop = useRef(false)
+  /** The sheet this one opened over, if any — held here so the exit can let it
+      back up as it starts rather than on the way out of the tree. */
+  const belowRef = useRef<Layer | undefined>(undefined)
 
   // Latest values, for the handlers that outlive the render that made them.
   const latest = useRef({ open, onClose, onExited })
@@ -167,6 +196,10 @@ export default function Sheet({
     }
 
     overlay.style.opacity = '0'
+    // Let the card below come back up now, alongside the exit — waiting for
+    // the unmount leaves it sitting in its receded state after the sheet that
+    // pushed it back is already gone.
+    belowRef.current?.cover(false)
     if (reducedMotion()) {
       spring.set(heightRef.current)
       // A frame later rather than right now, so the panel paints where it
@@ -181,15 +214,29 @@ export default function Sheet({
   }, [open, mounted])
 
   // `inert` on the app root does the whole job of a focus trap: nothing behind
-  // the sheet can be tabbed to, clicked, or read out while it's up.
+  // the sheet can be tabbed to, clicked, or read out while it's up. The sheet
+  // this one is opening over, if any, needs the same treatment by hand.
   useEffect(() => {
     if (!mounted) return
+    const overlay = overlayRef.current
     const root = document.getElementById('root')
     const previous = document.activeElement
+    const below = stack[stack.length - 1]
+    belowRef.current = below
+    below?.overlay.setAttribute('inert', '')
+    below?.cover(true)
+    if (overlay) stack.push({ overlay, cover: setCovered })
     root?.setAttribute('inert', '')
     panelRef.current?.focus({ preventScroll: true })
     return () => {
-      root?.removeAttribute('inert')
+      const at = stack.findIndex((layer) => layer.overlay === overlay)
+      if (at !== -1) stack.splice(at, 1)
+      below?.overlay.removeAttribute('inert')
+      below?.cover(false)
+      belowRef.current = undefined
+      // The last one out gives the page back; an inner sheet closing must not.
+      if (stack.length === 0) root?.removeAttribute('inert')
+      // After the un-inert, so focus can land back inside the sheet below.
       if (previous instanceof HTMLElement) previous.focus({ preventScroll: true })
     }
   }, [mounted])
@@ -197,7 +244,10 @@ export default function Sheet({
   useEffect(() => {
     if (!mounted || !dismissible) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') latest.current.onClose()
+      if (e.key !== 'Escape') return
+      // Only the sheet on top: the ones underneath stay where they are.
+      if (stack[stack.length - 1]?.overlay !== overlayRef.current) return
+      latest.current.onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -385,37 +435,50 @@ export default function Sheet({
         if (downOnBackdrop.current) onClose()
       }}
     >
-      <div
-        className={panelClass.join(' ')}
-        ref={panelRef}
-        role='dialog'
-        aria-modal='true'
-        aria-label={label}
-        tabIndex={-1}
-        style={{ transform: 'translate3d(0, 100%, 0)' }}
-        onClickCapture={(e) => {
-          if (!draggedRef.current) return
-          draggedRef.current = false
-          e.stopPropagation()
-          e.preventDefault()
-        }}
-      >
-        {dismissible && (
-          <div className='sheet-grip' aria-hidden='true'>
-            <span className='sheet-handle' />
-          </div>
-        )}
+      {/* The spring owns the panel's own transform, so the recession behind a
+          sheet opened over this one needs a box of its own to shrink. */}
+      <div className={covered ? 'sheet-riser sheet-riser-back' : 'sheet-riser'}>
         <div
-          className={footer ? 'sheet-body sheet-body-docked' : 'sheet-body'}
-          ref={bodyRef}
+          className={panelClass.join(' ')}
+          ref={panelRef}
+          role='dialog'
+          aria-modal='true'
+          aria-label={label}
+          tabIndex={-1}
+          style={
+            {
+              transform: 'translate3d(0, 100%, 0)',
+              // How many sheets this one stands over: each one takes a little
+              // off the height, so the card below is left something to show.
+              '--sheet-depth': depth,
+            } as React.CSSProperties
+          }
+          onClickCapture={(e) => {
+            if (!draggedRef.current) return
+            draggedRef.current = false
+            e.stopPropagation()
+            e.preventDefault()
+          }}
         >
-          {children}
-        </div>
-        {footer && (
-          <div className={scrolls ? 'sheet-footer sheet-footer-cut' : 'sheet-footer'}>
-            {footer}
+          {dismissible && (
+            <div className='sheet-grip' aria-hidden='true'>
+              <span className='sheet-handle' />
+            </div>
+          )}
+          <div
+            className={footer ? 'sheet-body sheet-body-docked' : 'sheet-body'}
+            ref={bodyRef}
+          >
+            {children}
           </div>
-        )}
+          {footer && (
+            <div
+              className={scrolls ? 'sheet-footer sheet-footer-cut' : 'sheet-footer'}
+            >
+              {footer}
+            </div>
+          )}
+        </div>
       </div>
     </div>,
     document.body,

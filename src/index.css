@@ -1998,9 +1998,48 @@ a:hover {
     transition: opacity 220ms ease;
 }
 
+/* Holds the panel so a sheet opened over this one has something to push back
+   that isn't the panel itself — that transform belongs to the spring. */
+.sheet-riser {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    /* Shrinks toward its own top edge: the card keeps its top line where it
+       was and draws in at the sides, rather than sinking out of sight under
+       the new sheet. */
+    transform-origin: 50% 0;
+    /* The way back up, which runs against the exit of the sheet that pushed
+       this one down: quick and eased out, so the card is home about when that
+       sheet clears the screen rather than starting once it has gone. */
+    transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Going back is the slower half — it plays under an arriving sheet. */
+.sheet-riser-back {
+    transform: scale(0.94);
+    transition: transform 260ms ease;
+}
+
+/* The strip left showing is all of the receded card there is to see, and it
+   can't be dragged while it's back there — so it doesn't offer a handle. */
+.sheet-riser-back .sheet-handle {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheet-riser,
+    .sheet-handle {
+        transition: none;
+    }
+}
+
 /* The panel's transform belongs to the spring in Sheet.tsx — nothing here
    animates it, so a drag can interrupt it at any point. */
 .sheet {
+    /* Each sheet stands this much shorter than the one it opened over, so a
+       stack always leaves a strip of the card below in view. */
+    --sheet-step: calc(var(--sheet-depth, 0) * 26px);
     position: relative;
     width: 100%;
     max-width: 520px;
@@ -2017,17 +2056,17 @@ a:hover {
 
 /* Hugs its content; the cap is what keeps a long list from filling the screen. */
 .sheet-auto {
-    max-height: 85dvh;
+    max-height: calc(85dvh - var(--sheet-step));
 }
 
 /* Parks at a fixed height instead, so a list that changes length doesn't
    resize the frame under your finger. */
 .sheet-tall {
-    height: 85dvh;
+    height: calc(85dvh - var(--sheet-step));
 }
 
 .sheet-full {
-    height: 95dvh;
+    height: calc(95dvh - var(--sheet-step));
 }
 
 /* No handle to space the content off the top edge. */
@@ -2068,6 +2107,7 @@ a:hover {
     height: 5px;
     border-radius: 99px;
     background: var(--dash);
+    transition: opacity 200ms ease;
 }
 
 /* Everything above the docked footer scrolls; the frame itself does not.

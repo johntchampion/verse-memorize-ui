@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import Screen, { BackButton } from '../components/Screen'
 import { SkeletonText } from '../components/Skeleton'
@@ -8,6 +7,7 @@ import QueueList from '../components/queue/QueueList'
 import QueueSlots from '../components/queue/QueueSlots'
 import ThemeSheet from '../components/queue/ThemeSheet'
 import { combineApi, useApi } from '../hooks/useApi'
+import { useBack } from '../hooks/useBack'
 
 /**
  * The practice queue: everything that hasn't been memorized and isn't in a
@@ -17,7 +17,7 @@ import { combineApi, useApi } from '../hooks/useApi'
  * at a time, as verses finish or get swapped out from a verse's detail view.
  */
 export default function Queue() {
-  const navigate = useNavigate()
+  const back = useBack()
   const me = useApi(() => api.me())
   const queue = useApi(() => api.queue())
   // Only for the snippets on the in-slot lines — those verses aren't in the
@@ -126,7 +126,7 @@ export default function Queue() {
 
   return (
     <Screen
-      leading={<BackButton onClick={() => navigate(-1)} label='Back' />}
+      leading={<BackButton onClick={back} label='Back' />}
       title={<h1>Up Next</h1>}
       trailing={<TranslationTag code={queue.data?.translation ?? null} />}
       sub={sub}

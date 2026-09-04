@@ -1,7 +1,14 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useLocation, useNavigationType, type Location } from 'react-router-dom'
 import { createSpring, type SpringConfig } from '../lib/spring'
 import { directionFor, type Direction } from '../lib/navDepth'
+import { clearAppNavigation, isAppNavigation } from '../hooks/useBack'
 
 /**
  * How far the screen behind travels while the one in front covers it, as a
@@ -123,6 +130,10 @@ export default function NavStack({
   const [transit, setTransit] = useState<Direction | null>(null)
   const [prevKey, setPrevKey] = useState(location.key)
 
+  /** Where a navigation that isn't going to animate should leave the page.
+      Nothing else is going to put the scroll right on that path. */
+  const [pendingScroll, setPendingScroll] = useState<number | null>(null)
+
   // Decided during render, not in an effect: the incoming screen has to be
   // parked off to the right in the same commit that mounts it, or it paints
   // once in its final place before the animation has started.
@@ -130,21 +141,52 @@ export default function NavStack({
     setPrevKey(location.key)
     const from = layers[layers.length - 1]
     const next: Layer = { key: location.key, location }
-    // A replace is a correction, not a journey — the redirects in App and the
-    // auth guards all use one, and none of them should look like a screen.
-    const direction =
-      navigationType === 'REPLACE' || reducedMotion()
-        ? null
-        : directionFor(from.location.pathname, location.pathname)
 
-    if (direction === null) {
-      setLayers([next])
-      setTransit(null)
-    } else {
+    // Whatever this navigation turns out to be, this is the last moment the
+    // document still belongs to the screen being left.
+    scrollMemory.set(from.key, window.scrollY)
+
+    const direction = directionFor(from.location.pathname, location.pathname)
+    const animate =
+      direction !== null &&
+      // A replace is a correction, not a journey — the redirects in App and
+      // the auth guards all use one, and none should look like a screen.
+      navigationType !== 'REPLACE' &&
+      !reducedMotion() &&
+      // A back or forward the browser drove has already been drawn by the
+      // browser, and drawing it again undoes it in front of the reader.
+      (navigationType !== 'POP' || isAppNavigation())
+
+    if (animate) {
       setLayers([from, next])
       setTransit(direction)
+      setPendingScroll(null)
+    } else {
+      setLayers([next])
+      setTransit(null)
+      setPendingScroll(
+        direction === 'push'
+          ? 0
+          : direction === 'pop'
+            ? (scrollMemory.get(next.key) ?? 0)
+            : null,
+      )
     }
   }
+
+  // The mark a back control leaves is only good for the render it was left
+  // for; anything arriving after this is the browser's until told otherwise.
+  useEffect(() => {
+    clearAppNavigation()
+  }, [location.key])
+
+  // Before paint, so a screen that arrives without an animation is never seen
+  // at the wrong offset first. Keyed on `layers` as well as the offset itself,
+  // because two pops in a row can want the same number.
+  useLayoutEffect(() => {
+    if (pendingScroll === null) return
+    restoreScroll(pendingScroll)
+  }, [layers, pendingScroll])
 
   const stackRef = useRef<HTMLDivElement>(null)
   const scrimRef = useRef<HTMLDivElement>(null)
@@ -167,10 +209,7 @@ export default function NavStack({
     // "close enough to home" from the moment it set off.
     const width = stack.clientWidth || window.innerWidth
 
-    // Read before the stack goes fixed: the document collapses under it and
-    // takes the scroll position with it.
-    const leaving = window.scrollY
-    scrollMemory.set(from.key, leaving)
+    const leaving = scrollMemory.get(from.key) ?? 0
     const landing = push ? 0 : (scrollMemory.get(to.key) ?? 0)
 
     // Out of flow, neither screen has a scroll position of its own any more,

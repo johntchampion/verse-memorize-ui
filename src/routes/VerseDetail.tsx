@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import Screen, { BackButton } from '../components/Screen'
 import HistoryCard from '../components/verses/HistoryCard'
@@ -8,6 +8,7 @@ import SlotPickerSheet from '../components/verses/SlotPickerSheet'
 import SoonerCard from '../components/verses/SoonerCard'
 import VerseCard from '../components/verses/VerseCard'
 import { useApi } from '../hooks/useApi'
+import { useBack } from '../hooks/useBack'
 
 /**
  * One verse, end to end: the text, where it sits on the ladder, every attempt
@@ -16,7 +17,7 @@ import { useApi } from '../hooks/useApi'
  */
 export default function VerseDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const back = useBack()
   const detail = useApi(() => api.verse(id ?? ''))
   // Slot occupants, for the "put it in a practice slot" picker.
   const me = useApi(() => api.me())
@@ -55,7 +56,7 @@ export default function VerseDetail() {
   return (
     <Screen
       layout='stack'
-      leading={<BackButton onClick={() => navigate(-1)} label='Back to verses' />}
+      leading={<BackButton onClick={back} label='Back to verses' />}
       title={
         <span className='small muted' style={{ fontWeight: 800 }}>
           Verses
@@ -66,7 +67,7 @@ export default function VerseDetail() {
       error={detail.error}
       onRetry={detail.refetch}
       errorActions={
-        <button className='btn-ghost' onClick={() => navigate(-1)}>
+        <button className='btn-ghost' onClick={back}>
           Back to verses
         </button>
       }

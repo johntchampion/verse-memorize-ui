@@ -67,11 +67,14 @@ export default function Settings() {
         label='Translation'
         id='translation'
         options={
-          catalog.data?.translations.map((option) => ({
-            value: option.code,
-            label: option.name,
-            note: option.license,
-          })) ?? null
+          catalog.data?.translations
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((option) => ({
+              value: option.code,
+              label: option.name,
+              note: option.license,
+            })) ?? null
         }
         hasNote
         pref={translation}

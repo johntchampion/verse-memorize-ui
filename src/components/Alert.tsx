@@ -40,18 +40,10 @@ export default function Alert({
   dismissible = true,
   extra,
 }: Props) {
-  // `open` leads, `mounted` and `visible` trail it — mounting (and dropping
-  // `visible` on the way out) happen at render time, same trick Sheet.tsx
-  // uses, so only the async half (the rAF and the exit timer) lives in the
-  // effect below.
+  // `open` leads, `mounted` and `visible` trail it: mounting is immediate,
+  // unmounting waits out the exit animation (or skips it under reduced motion).
   const [mounted, setMounted] = useState(open)
   const [visible, setVisible] = useState(open)
-  const [prevOpen, setPrevOpen] = useState(open)
-  if (open !== prevOpen) {
-    setPrevOpen(open)
-    if (open) setMounted(true)
-    else setVisible(false)
-  }
 
   const cardRef = useRef<HTMLDivElement>(null)
   const downOnBackdrop = useRef(false)
@@ -60,10 +52,14 @@ export default function Alert({
 
   useEffect(() => {
     if (open) {
+      queueMicrotask(() => setMounted(true))
       const frame = requestAnimationFrame(() => setVisible(true))
       return () => cancelAnimationFrame(frame)
     }
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    queueMicrotask(() => setVisible(false))
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
     const timer = setTimeout(() => setMounted(false), reduced ? 0 : EXIT_MS)
     return () => clearTimeout(timer)
   }, [open])
@@ -76,7 +72,8 @@ export default function Alert({
     cardRef.current?.focus({ preventScroll: true })
     return () => {
       root?.removeAttribute('inert')
-      if (previous instanceof HTMLElement) previous.focus({ preventScroll: true })
+      if (previous instanceof HTMLElement)
+        previous.focus({ preventScroll: true })
     }
   }, [mounted])
 
@@ -93,7 +90,9 @@ export default function Alert({
 
   return createPortal(
     <div
-      className={visible ? 'alert-overlay alert-overlay-visible' : 'alert-overlay'}
+      className={
+        visible ? 'alert-overlay alert-overlay-visible' : 'alert-overlay'
+      }
       onPointerDown={(e) => {
         downOnBackdrop.current = e.target === e.currentTarget
       }}

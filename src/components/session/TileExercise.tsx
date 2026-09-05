@@ -182,8 +182,18 @@ export default function TileExercise({
       return
     }
     const target = currentBlankRef.current
-    if (!target || !isOutOfView(target, dockRef.current)) return
-    target.scrollIntoView({ block: 'center', behavior: scrollBehavior() })
+    const dock = dockRef.current
+    if (!target || !isOutOfView(target, dock)) return
+    // Center within the space above the dock, not `scrollIntoView`'s whole
+    // viewport: the dock is a sticky element the browser doesn't know covers
+    // the bottom of the screen, and on a short iOS viewport (already
+    // shrunk further by Safari's own chrome) that covered band is a big
+    // enough share of the screen that a plain viewport-center under-scrolls,
+    // landing the blank right behind the dock instead of clear of it.
+    const dockTop = dock?.getBoundingClientRect().top ?? window.innerHeight
+    const rect = target.getBoundingClientRect()
+    const targetCenter = rect.top + rect.height / 2
+    window.scrollBy({ top: targetCenter - dockTop / 2, behavior: scrollBehavior() })
   }, [filledBlanks, filledRefSteps, refStep])
 
   /** Callers add the miss to whichever counter their phase is graded on. */

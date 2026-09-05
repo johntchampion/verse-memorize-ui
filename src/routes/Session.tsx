@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { SessionExercise } from '../api/types'
 import SessionComplete from '../components/session/SessionComplete'
@@ -7,10 +7,9 @@ import SessionHeader from '../components/session/SessionHeader'
 import SessionSkeleton from '../components/session/SessionSkeleton'
 import TileExercise from '../components/session/TileExercise'
 import TypedExercise from '../components/session/TypedExercise'
-import { stageChangeMessage } from '../lib/exercise'
 import {
-  attemptEvent,
-  slotFilledEvent,
+  eventToast,
+  presentEvent,
   type SessionEvent,
 } from '../lib/sessionEvents'
 
@@ -24,14 +23,31 @@ interface ErrorState {
 const TOAST_MS = 2500
 
 /**
- * The exercise runner. Holds today's queue in local state and steps through
- * it one exercise at a time; only submitted answers round-trip
+ * The exercise runner. Holds what's left of today's queue in local state and
+ * steps through it one exercise at a time; only submitted answers round-trip
  * to the server. Answers are judged client-side against the full verse text,
  * fetched per verse up front.
+ *
+ * The day's plan lives on the server, and each exercise says whether it has
+ * been answered — so leaving part-way through and coming back picks up at the
+ * first one outstanding rather than starting the day over. The recap follows
+ * the same rule: what the day moved, and what it added up to, come back from
+ * the server rather than being accumulated here, so a session resumed after a
+ * quit still reports the whole of it. `?practice=1` runs the separate drill
+ * instead: one round of each slotted verse, counting toward nothing, for a day
+ * whose path is already walked.
  */
 export default function Session() {
+  const [searchParams] = useSearchParams()
+  const practice = searchParams.get('practice') === '1'
+
   const [phase, setPhase] = useState<Phase>('loading')
   const [queue, setQueue] = useState<SessionExercise[]>([])
+  /** Answered before this sitting — the progress rail counts the whole day. */
+  const [alreadyDone, setAlreadyDone] = useState(0)
+  const [dayTotal, setDayTotal] = useState(0)
+  /** Distinct verses across the whole day, not just what's left of it. */
+  const [dayVerses, setDayVerses] = useState(0)
   const [texts, setTexts] = useState<Record<string, string>>({})
   const [translation, setTranslation] = useState('')
   const [index, setIndex] = useState(0)
@@ -49,14 +65,15 @@ export default function Session() {
     setError(null)
     setPhase('loading')
     try {
-      const today = await api.sessionToday()
-      if (today.exercises.length === 0) {
+      const today = await api.sessionToday(practice)
+      const outstanding = today.exercises.filter((e) => !e.completed)
+      if (outstanding.length === 0) {
         setPhase('empty')
         return
       }
       // Every queued verse is unlocked for this user, so its full text is
       // available — it's the answer key for both exercise types.
-      const ids = [...new Set(today.exercises.map((e) => e.verseId))]
+      const ids = [...new Set(outstanding.map((e) => e.verseId))]
       const details = await Promise.all(ids.map((id) => api.verse(id)))
       const byId: Record<string, string> = {}
       for (const detail of details) {
@@ -66,7 +83,15 @@ export default function Session() {
         }
         byId[detail.verse.id] = detail.verse.text
       }
-      setQueue(today.exercises)
+      setQueue(outstanding)
+      setAlreadyDone(today.completedCount)
+      setDayTotal(today.count)
+      setDayVerses(new Set(today.exercises.map((e) => e.verseId)).size)
+      // Seeded from the server, so a session picked up again recaps everything
+      // the day moved rather than only what happens from here on. A drill gets
+      // nothing to seed: its recap is its own.
+      setEvents(today.events.map(presentEvent))
+      setCorrectCount(today.correctCount)
       setTexts(byId)
       setTranslation(today.translation)
       setIndex(0)
@@ -80,7 +105,7 @@ export default function Session() {
         retry: () => void load(),
       })
     }
-  }, [])
+  }, [practice])
 
   useEffect(() => {
     void load()
@@ -96,12 +121,15 @@ export default function Session() {
     setError(null)
     setPhase('finishing')
     try {
-      const result = await api.sessionComplete()
-      if (result.slotsFilled.length > 0) {
-        setEvents((prev) => [
-          ...prev,
-          ...result.slotsFilled.map(slotFilledEvent),
-        ])
+      // A drill is extra work on top of a finished day: there is no session to
+      // record and no refill for it to trigger.
+      let recorded = false
+      if (!practice) {
+        const result = await api.sessionComplete()
+        recorded = result.recorded
+        if (result.events.length > 0) {
+          setEvents((prev) => [...prev, ...result.events.map(presentEvent)])
+        }
       }
       let streak: number | null = null
       try {
@@ -110,7 +138,7 @@ export default function Session() {
         // The session is already recorded; a failed streak fetch shouldn't
         // block the completion screen.
       }
-      setCompletion({ recorded: result.recorded, streak })
+      setCompletion({ recorded, streak })
       setPhase('done')
     } catch (err) {
       setError({
@@ -119,7 +147,7 @@ export default function Session() {
         retry: () => void finish(),
       })
     }
-  }, [])
+  }, [practice])
 
   // A function declaration (hoisted) so the retry closure can re-invoke it.
   async function submit(correct: boolean) {
@@ -133,18 +161,14 @@ export default function Session() {
         correct,
       )
       if (correct) setCorrectCount((n) => n + 1)
-      const message = stageChangeMessage(exercise.stage, outcome)
+      // What this attempt moved, as the server recorded it — including any
+      // slot its outcome refilled. Nothing is derived from `exercise.stage`
+      // here: that was captured when the day loaded, and a verse is drilled
+      // three times a day, so it goes stale the moment one of them upgrades.
+      const message = outcome.events.map(eventToast).find((line) => line)
       if (message) setToast(message)
-      const event = attemptEvent(exercise.reference, exercise.stage, outcome)
-      // A graduation empties a slot and a demotion claims one, so an attempt
-      // can refill slots mid-session — not just session/complete. A demoted
-      // verse that landed straight back in a free slot is in both the outcome
-      // and this list, and `attemptEvent` already reported it.
-      const filled = outcome.slotsFilled
-        .filter((row) => row.id !== outcome.userVerse.id)
-        .map(slotFilledEvent)
-      if (event || filled.length > 0) {
-        setEvents((prev) => [...prev, ...(event ? [event] : []), ...filled])
+      if (outcome.events.length > 0) {
+        setEvents((prev) => [...prev, ...outcome.events.map(presentEvent)])
       }
       if (index + 1 < queue.length) {
         setIndex(index + 1)
@@ -200,9 +224,15 @@ export default function Session() {
   if (phase === 'empty') {
     return (
       <main className='shell stack'>
-        <p className='eyebrow'>Today&rsquo;s session</p>
+        <p className='eyebrow'>
+          {practice ? 'Extra practice' : 'Today\u2019s session'}
+        </p>
         <h1 style={{ fontFamily: 'var(--serif)' }}>All caught up</h1>
-        <p className='muted'>Nothing is due right now. Come back tomorrow.</p>
+        <p className='muted'>
+          {practice
+            ? 'There are no verses in your practice slots to drill.'
+            : 'Nothing is due right now. Come back tomorrow.'}
+        </p>
         <Link to='/' className='btn-ghost'>
           Back to home
         </Link>
@@ -215,8 +245,9 @@ export default function Session() {
       <SessionComplete
         streak={completion.streak}
         recorded={completion.recorded}
-        exercises={queue.length}
-        verses={new Set(queue.map((e) => e.verseId)).size}
+        practice={practice}
+        exercises={dayTotal}
+        verses={dayVerses}
         correct={correctCount}
         events={events}
       />
@@ -235,7 +266,7 @@ export default function Session() {
         </div>
       )}
 
-      <SessionHeader done={index} total={queue.length} />
+      <SessionHeader done={alreadyDone + index} total={dayTotal} />
 
       {exercise.exerciseType === 'tile_fill_blank' ? (
         <TileExercise

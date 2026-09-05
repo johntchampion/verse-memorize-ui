@@ -8,6 +8,7 @@ import type { SessionEvent } from '../../lib/sessionEvents'
 export default function SessionComplete({
   streak,
   recorded,
+  practice,
   exercises,
   verses,
   correct,
@@ -17,6 +18,8 @@ export default function SessionComplete({
   streak: number | null
   /** False when today was already recorded; this was extra practice. */
   recorded: boolean
+  /** A drill rather than the day's path: it moved verses, but kept no day. */
+  practice?: boolean
   exercises: number
   verses: number
   correct: number
@@ -39,7 +42,9 @@ export default function SessionComplete({
           <div className='complete-eyebrow'>Day streak</div>
         </>
       )}
-      <h1 className='complete-title'>Kept the day.</h1>
+      <h1 className='complete-title'>
+        {practice ? 'Another round down.' : 'Kept the day.'}
+      </h1>
       <p className='complete-sub'>
         {exercises} {exercises === 1 ? 'exercise' : 'exercises'} · {verses}{' '}
         {verses === 1 ? 'verse' : 'verses'} · {cleanNote}

@@ -1,4 +1,4 @@
-import type { AttemptOutcome, Stage } from '../api/types'
+import type { Stage } from '../api/types'
 
 /**
  * Client-side exercise parsing.
@@ -11,7 +11,8 @@ import type { AttemptOutcome, Stage } from '../api/types'
  * used to build the exercise.
  */
 
-const BLANK = '____'
+/** The backend's blank marker, as it appears in `blankedText`. */
+export const BLANK = '____'
 
 /** Same word-core pattern as the backend's exerciseBuilder. */
 const WORD_RE = /[\p{L}\p{N}'’-]+/u
@@ -225,49 +226,3 @@ export function usesReferencePhase(stage: Stage): boolean {
  * mistapped book.
  */
 export const REFERENCE_SLIP_PER_STEP = 1
-
-/**
- * Toast copy for whatever an attempt just did to the verse.
- *
- * This needs the whole outcome, not just the two stages: when a review verse
- * fails twice and no slot is free it stays in `review` and only
- * `needs_relearning` flips, which a stage comparison can't see.
- */
-export function stageChangeMessage(
-  from: Stage,
-  outcome: AttemptOutcome,
-): string | null {
-  const to = outcome.userVerse.stage
-
-  // Parked for relearning: out of the review rotation until a slot opens.
-  if (outcome.userVerse.needs_relearning === 1) {
-    return 'Slipped twice — waiting for a slot to relearn'
-  }
-
-  // Demoted out of review and re-slotted straight away, because a slot was free.
-  if (from === 'review' && to === 'learning_heavy') {
-    return 'Back into practice at heavy blanks'
-  }
-
-  if (from === to) return null
-
-  const fromTier = LEARNING_ORDER.indexOf(from)
-  const toTier = LEARNING_ORDER.indexOf(to)
-  if (fromTier !== -1 && toTier !== -1) {
-    return toTier > fromTier
-      ? `Nice — moving to ${STAGE_LABELS[to].toLowerCase()}`
-      : `Slipped back to ${STAGE_LABELS[to].toLowerCase()}`
-  }
-
-  switch (to) {
-    case 'review':
-      if (from === 'learning_heavy') return 'Graduated! Now in review'
-      // Only mastered falls back into review, and that miss already counts as
-      // the first of review's two strikes.
-      return 'Lost mastery — back in review, one strike in'
-    case 'mastered':
-      return 'Mastered — fully memorized'
-    default:
-      return null
-  }
-}

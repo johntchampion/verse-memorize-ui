@@ -58,6 +58,7 @@ src/
   context/AuthContext.tsx
   hooks/useApi.ts      fetch-on-mount + loading/error + refetch
   lib/exercise.ts      exercise parsing, answer derivation, progression labels
+  lib/path.ts          today's session read as a path of stops, for the Today tab
   lib/dates.ts         user-timezone day boundaries (mirrors the API's)
   routes/              one file per screen: Onboarding, Login, Signup, Today,
                        Practicing, AllVerses, Session, VerseDetail, Settings
@@ -138,8 +139,28 @@ backend tokenizer changes, `lib/exercise.ts` must change with it.**
   attempts hit the server. Whatever `/api/attempt` reports surfaces as a brief
   toast and as a line on the completion screen — downgrades and relearning
   included, not just wins. Queue exhaustion calls `POST /api/session/complete`.
-- `POST /api/attempt` returns `slotsFilled` as well as `sessionComplete` does:
-  a graduation empties a slot and refills it mid-session. Both are rendered.
+- **Progress through the day is the server's, not the runner's.** The day's
+  plan is persisted, and every exercise `GET /api/session/today` returns says
+  whether it has been answered. The runner loads only the ones that haven't, so
+  leaving part-way through and coming back resumes rather than restarting —
+  and there is no way to redo a stop or skip ahead to one.
+- `/session?practice=1` runs the drill instead
+  (`GET /api/session/today?practice=true`): one exercise per slotted verse,
+  re-randomised on every call. It counts toward nothing, so the runner skips
+  `POST /api/session/complete` at the end of it. Attempts still hit
+  `/api/attempt` and still move verses along the ladder — only the day's
+  bookkeeping is untouched.
+- **The recap is the server's too.** `GET /api/session/today` returns `events`
+  (everything the day has moved) and `correctCount` alongside `count`, so the
+  completion screen reports the whole day rather than only the sitting it was
+  open for. `/api/attempt` and `/api/session/complete` return deltas, which the
+  runner appends as it goes. `lib/sessionEvents.ts` only dresses them — no
+  stage comparing left in the client, which is what stopped the same upgrade
+  being announced again by the two repetitions of that verse still queued
+  behind it.
+- A drill's recap is drill-scoped: `?practice=true` serves no `events` and no
+  `correctCount`, so the screen shows only what that round moved. Its attempts
+  are still recorded, so resuming the day's session afterwards includes them.
 
 There's a standalone cross-check script pattern worth reusing if you touch the
 parser: import the backend's `buildExercise` and this repo's `parseExercise`
@@ -147,6 +168,36 @@ in one `tsx` script and assert that every stage/instance/verse combination
 aligns and that every blank's answer appears in the word bank. `review` is the
 case worth covering — it blanks every token, so alignment has the least slack
 there.
+
+## The Today tab
+
+Today draws the day as a **path**: one stop per exercise, in the order the
+runner will take them, marked done / here / ahead. `lib/path.ts` builds it from
+`GET /api/session/today` alone.
+
+Two things about it are derived rather than served. The **grouping** — "Coming
+back today", "Round 1", "Round 2" — comes from counting each verse's
+appearances: the plan interleaves a verse's repetitions round-robin, so a
+learning verse's nth appearance is its nth round, and a heading is drawn
+wherever that label changes. A heading can legitimately repeat, which is what a
+slot refilled mid-session looks like: its exercises land at the tail of the
+plan and start a fresh "Round 1". The **time estimates** are a flat per-blank
+guess (`lib/path.ts`); nothing on the wire knows how long an exercise takes, so
+they're rounded hard to keep from implying otherwise.
+
+Only the live stop is a link, and it leads exactly where the button at the
+bottom does — into the day's plan at the first exercise outstanding. Once every
+stop is done, the button becomes the practice drill instead.
+
+The tab is the one screen with **no page scroll of its own**: `.today-shell` is
+exactly `100dvh`, and the stops scroll inside `.path-scroll` between a heading
+and a button that both hold still. That region ends in a `mask-image` rather
+than a hard edge, so a stop crossing either boundary fades out instead of being
+cut — its padding matches the opaque part of the mask, so the first and last
+stops sit at full strength at rest. `PathList` scrolls the live stop into the
+middle on mount when it would otherwise start off screen (or inside the fade,
+which is why the check has a margin — `FADE` there and the mask stops in the
+CSS are the same numbers and have to move together).
 
 ## Progression model
 

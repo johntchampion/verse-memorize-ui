@@ -109,6 +109,39 @@ export interface MeResponse {
   }
 }
 
+/**
+ * What a verse did during a session, as the server recorded it.
+ *
+ * The completion screen used to work these out for itself by comparing the
+ * stage it had cached against the one an attempt came back with. That could
+ * only remember the current sitting — a session resumed after a quit lost
+ * everything earned before it — and the cached stage went stale as soon as a
+ * verse upgraded, so its remaining repetitions re-reported the same move.
+ */
+export type SessionEventKind =
+  | 'tier_up'
+  | 'tier_down'
+  | 'graduated'
+  | 'mastered'
+  | 'lost_mastery'
+  | 'demoted_to_learning'
+  | 'relearning_queued'
+  | 'slot_filled'
+  | 'slot_returned'
+
+export interface SessionEventBody {
+  id: string
+  kind: SessionEventKind
+  verseId: string
+  /** Rendered server-side, so a slot event can name the verse that arrived. */
+  reference: string
+  /** Null for slot events, which aren't a move along the ladder. */
+  stageFrom: Stage | null
+  stageTo: Stage | null
+  slot: number | null
+  createdAt: string
+}
+
 // GET /api/session/today
 export interface SessionExercise {
   verseId: string
@@ -120,12 +153,29 @@ export interface SessionExercise {
   wordBank: string[]
   stage: Stage
   queue: 'review' | 'learning'
+  /** Already answered today. The day's plan is persisted and append-only, so
+      a session picked up again resumes at the first exercise still false. */
+  completed: boolean
+  /** How it was answered, or null while still outstanding. */
+  correct: boolean | null
+  /** The verse's progress as it stands, in the shape POST /api/attempt
+      returns. */
+  userVerse: UserVerse
 }
 
 export interface SessionTodayResponse {
   translation: string
+  /** True when this is a practice drill rather than the day's plan: one
+      exercise per slotted verse, counting toward nothing. */
+  practice: boolean
   exercises: SessionExercise[]
   count: number
+  completedCount: number
+  correctCount: number
+  /** Everything the day has moved so far — the whole day, not just the part
+      this client was open for, so a resumed session can still recap it all.
+      Always empty for a practice drill, whose recap is its own. */
+  events: SessionEventBody[]
 }
 
 // POST /api/attempt
@@ -136,6 +186,10 @@ export interface AttemptOutcome {
   /** Rows slotted by the refill this attempt triggered. A row with a
       `graduated_at` is a verse returning to practice, not a new one. */
   slotsFilled: UserVerse[]
+  /** Just what this attempt moved — a delta, unlike session/today's whole
+      day. A verse re-slotted by this attempt's own refill is reported once,
+      here, and not again under `slotsFilled`. */
+  events: SessionEventBody[]
 }
 
 // POST /api/session/complete
@@ -143,6 +197,8 @@ export interface SessionCompleteResponse {
   recorded: boolean
   sessionsCompleted: number
   slotsFilled: UserVerse[]
+  /** Just the slots this call topped up. */
+  events: SessionEventBody[]
 }
 
 // GET /api/verses

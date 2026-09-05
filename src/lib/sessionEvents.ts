@@ -1,5 +1,5 @@
-import type { AttemptOutcome, Stage, UserVerse } from '../api/types'
-import { LEARNING_ORDER, STAGE_LABELS } from './exercise'
+import type { SessionEventBody, SessionEventKind } from '../api/types'
+import { STAGE_LABELS } from './exercise'
 
 /** A moment worth recapping on the completion screen. */
 export interface SessionEvent {
@@ -11,99 +11,115 @@ export interface SessionEvent {
 }
 
 /**
- * Everything an attempt moved, worth recapping on the completion screen —
- * losses as well as wins. A session that quietly dropped a verse a tier should
- * say so; that's how the day-to-day rules become learnable.
+ * How each kind of move reads. The server decides what happened; this only
+ * decides how to say it, which is why there is no comparing of stages left
+ * here — every branch is a lookup.
+ *
+ * Losses are recapped as readily as wins. A session that quietly dropped a
+ * verse a tier should say so; that's how the day-to-day rules become learnable.
  */
-export function attemptEvent(
-  reference: string,
-  from: Stage,
-  outcome: AttemptOutcome,
-): SessionEvent | null {
-  const to = outcome.userVerse.stage
+interface Look {
+  icon: string
+  iconBg: string
+  detailColor: string
+  /** Null where the copy has to be built from the stages the verse moved between. */
+  detail: string | null
+}
 
-  // Parked for relearning. The stage itself is unchanged when no slot was
-  // free, so this has to be checked before any stage comparison.
-  if (outcome.userVerse.needs_relearning === 1) {
-    return {
-      icon: '↺',
-      iconBg: 'var(--coral-wash)',
-      title: reference,
-      detail: 'Slipped twice — waiting for a slot',
-      detailColor: 'var(--coral-text)',
-    }
+const CORAL = { iconBg: 'var(--coral-wash)', detailColor: 'var(--coral-text)' }
+const GREEN = { iconBg: 'var(--green-wash)', detailColor: 'var(--green-text)' }
+const AMBER = { iconBg: 'var(--amber-wash)', detailColor: 'var(--amber-soft)' }
+
+const PRESENTATION: Record<SessionEventKind, Look> = {
+  // Tier moves spell out the two ends, so `detail` is built from the stages.
+  tier_up: { icon: '↑', ...CORAL, detail: null },
+  tier_down: { icon: '↓', ...CORAL, detail: null },
+  graduated: {
+    icon: '✓',
+    ...GREEN,
+    detail: 'Graduated — now in review',
+  },
+  mastered: {
+    icon: '✓',
+    ...GREEN,
+    detail: 'Mastered — fully memorized',
+  },
+  lost_mastery: {
+    icon: '↓',
+    ...CORAL,
+    detail: 'Lost mastery — back in review',
+  },
+  demoted_to_learning: {
+    icon: '↺',
+    ...CORAL,
+    detail: 'Back to practice at heavy blanks',
+  },
+  relearning_queued: {
+    icon: '↺',
+    ...CORAL,
+    detail: 'Slipped twice — waiting for a slot',
+  },
+  slot_filled: {
+    icon: '🔓',
+    ...AMBER,
+    detail: 'A new verse joins your practice',
+  },
+  slot_returned: {
+    icon: '↺',
+    ...CORAL,
+    detail: 'Picked up the open slot at heavy blanks',
+  },
+}
+
+/** Toast copy, for the moment a move happens rather than the recap of it. */
+const TOASTS: Record<SessionEventKind, string | null> = {
+  tier_up: null, // Names the tier it reached; built below.
+  tier_down: null,
+  graduated: 'Graduated! Now in review',
+  mastered: 'Mastered — fully memorized',
+  // The miss that cost mastery is also the first of review's two strikes.
+  lost_mastery: 'Lost mastery — back in review, one strike in',
+  demoted_to_learning: 'Back into practice at heavy blanks',
+  relearning_queued: 'Slipped twice — waiting for a slot to relearn',
+  // A slot filling is worth recapping at the end, but it isn't about the
+  // answer just given, so it doesn't interrupt with a toast.
+  slot_filled: null,
+  slot_returned: null,
+}
+
+/** `Easy → Medium`, for the two kinds that move between named tiers. */
+function tierMove(event: SessionEventBody): string | null {
+  if (!event.stageFrom || !event.stageTo) return null
+  return `${STAGE_LABELS[event.stageFrom]} → ${STAGE_LABELS[event.stageTo]}`
+}
+
+/** One recorded event, dressed for the completion screen. */
+export function presentEvent(event: SessionEventBody): SessionEvent {
+  const look = PRESENTATION[event.kind]
+  return {
+    icon: look.icon,
+    iconBg: look.iconBg,
+    title: event.reference,
+    detail: look.detail ?? tierMove(event) ?? '',
+    detailColor: look.detailColor,
   }
-
-  // Demoted out of review straight into a free slot.
-  if (from === 'review' && to === 'learning_heavy') {
-    return {
-      icon: '↺',
-      iconBg: 'var(--coral-wash)',
-      title: reference,
-      detail: 'Back to practice at heavy blanks',
-      detailColor: 'var(--coral-text)',
-    }
-  }
-
-  if (from === to) return null
-
-  const fromTier = LEARNING_ORDER.indexOf(from)
-  const toTier = LEARNING_ORDER.indexOf(to)
-  if (fromTier !== -1 && toTier !== -1) {
-    const up = toTier > fromTier
-    return {
-      icon: up ? '↑' : '↓',
-      iconBg: 'var(--coral-wash)',
-      title: reference,
-      detail: `${STAGE_LABELS[from]} → ${STAGE_LABELS[to]}`,
-      detailColor: 'var(--coral-text)',
-    }
-  }
-
-  if (to === 'review') {
-    // From heavy this is graduation; otherwise it's mastery lost.
-    const graduated = from === 'learning_heavy'
-    return {
-      icon: graduated ? '✓' : '↓',
-      iconBg: graduated ? 'var(--green-wash)' : 'var(--coral-wash)',
-      title: reference,
-      detail: graduated
-        ? 'Graduated — now in review'
-        : 'Lost mastery — back in review',
-      detailColor: graduated ? 'var(--green-text)' : 'var(--coral-text)',
-    }
-  }
-
-  if (to === 'mastered') {
-    return {
-      icon: '✓',
-      iconBg: 'var(--green-wash)',
-      title: reference,
-      detail: 'Mastered — fully memorized',
-      detailColor: 'var(--green-text)',
-    }
-  }
-
-  return null
 }
 
 /**
- * A slot that just filled. A row carrying a `graduated_at` has been through
- * learning before — it's a verse coming back, not a new one arriving.
+ * What to say out loud when a move lands mid-session, or null for a move that
+ * isn't worth interrupting for.
  */
-export function slotFilledEvent(row: UserVerse): SessionEvent {
-  const returning = row.graduated_at !== null
-  return {
-    icon: returning ? '↺' : '🔓',
-    iconBg: returning ? 'var(--coral-wash)' : 'var(--amber-wash)',
-    title: returning
-      ? 'A verse returns to practice'
-      : row.slot !== null
-        ? `Slot ${row.slot} unlocked`
-        : 'New verse unlocked',
-    detail: returning
-      ? 'Picked up the open slot at heavy blanks'
-      : 'A new verse joins your practice',
-    detailColor: returning ? 'var(--coral-text)' : 'var(--amber-soft)',
+export function eventToast(event: SessionEventBody): string | null {
+  const fixed = TOASTS[event.kind]
+  if (fixed) return fixed
+
+  const to = event.stageTo
+  if (!to) return null
+  if (event.kind === 'tier_up') {
+    return `Nice — moving to ${STAGE_LABELS[to].toLowerCase()}`
   }
+  if (event.kind === 'tier_down') {
+    return `Slipped back to ${STAGE_LABELS[to].toLowerCase()}`
+  }
+  return null
 }

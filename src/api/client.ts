@@ -141,7 +141,12 @@ export const api = {
   /** The translations a user can pick between, for the Settings picker. */
   translations: () => request<TranslationsResponse>('/api/translations'),
 
-  sessionToday: () => request<SessionTodayResponse>('/api/session/today'),
+  /** Today's plan, resumable — or with `practice`, a drill of the slotted
+      verses that counts toward nothing and can be asked for repeatedly. */
+  sessionToday: (practice = false) =>
+    request<SessionTodayResponse>(
+      practice ? '/api/session/today?practice=true' : '/api/session/today',
+    ),
 
   attempt: (
     userVerseId: string,

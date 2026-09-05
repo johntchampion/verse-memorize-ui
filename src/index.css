@@ -954,74 +954,236 @@ a:hover {
     margin-top: 5px;
 }
 
-/* --- Today tab: streak hero ----------------------------------------------- */
+/* --- Today tab: the path -------------------------------------------------- */
 
+/*
+ * Exactly the viewport, and no page scroll of its own: the heading and the
+ * button hold still and the stops between them scroll inside .path-scroll.
+ * The shell's own bottom padding (.shell-tabbed) is what keeps the button
+ * clear of the fixed tab bar.
+ */
 .today-shell {
-    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
-.today-hero {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 30px;
-    padding: 24px 0 16px;
-}
-
-.streak-hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+/* With no path under it, the heading is the whole screen — so it takes the
+   middle rather than hanging off the header. */
+.path-intro-alone {
+    margin: auto 0;
     text-align: center;
 }
 
-.streak-hero-circle {
-    width: 172px;
-    height: 172px;
-    border-radius: 50%;
-    background: var(--amber-wash);
-    border: 8px solid var(--amber);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    animation: bob 4s ease-in-out infinite;
-}
-
-.streak-hero-count {
+.path-head {
     font-family: var(--serif);
-    font-size: 4.1rem;
+    font-size: 1.6rem;
     font-weight: 700;
-    color: var(--amber-deep);
-    line-height: 1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
+    margin-top: 18px;
 }
 
-.streak-hero-label {
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--amber-soft);
-    margin-top: 4px;
-}
-
-.today-copy {
-    font-size: 0.9rem;
-    font-weight: 700;
+.path-sub {
+    font-size: 0.84rem;
+    font-weight: 600;
     color: var(--soft);
-    margin-top: 14px;
+    margin-top: 7px;
+    text-wrap: pretty;
 }
 
-.today-aside {
-    text-align: center;
-    font-size: 0.85rem;
+/*
+ * The only scrolling region on the tab. Content doesn't meet its edges, it
+ * dissolves at them — the mask fades the first and last few pixels out, so a
+ * stop passing either boundary reads as continuing past it rather than being
+ * cut off. The padding matches the opaque part of the mask, so at rest the top
+ * and bottom stops sit at full strength.
+ */
+.path-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 22px 0 26px;
+    mask-image: linear-gradient(180deg,
+            transparent 0,
+            #000 22px,
+            #000 calc(100% - 26px),
+            transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg,
+            transparent 0,
+            #000 22px,
+            #000 calc(100% - 26px),
+            transparent 100%);
+
+    /* No bar. This region is inset from the edge of the display, so a
+       scrollbar would draw a rule down the middle of the screen rather than
+       along its side — and the fades at both ends already say there is more. */
+    scrollbar-width: none;
+}
+
+.path-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/*
+ * The stops, strung down one rail.
+ *
+ * The rail is a single line behind the list rather than a segment per row, so
+ * it runs unbroken through the group headings. That pins its ends to the first
+ * and last circle centres: every step is [heading?][row] in a column of one
+ * gap, so the first centre sits a heading, a gap and half a circle down, and
+ * the last half a circle up from the bottom.
+ */
+.path-list {
+    --path-circle: 56px;
+    --path-gap: 12px;
+    --path-group: 14px;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--path-gap);
+}
+
+.path-list::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--path-circle) / 2 - 1.5px);
+    top: calc(var(--path-group) + var(--path-gap) + var(--path-circle) / 2);
+    bottom: calc(var(--path-circle) / 2);
+    border-left: 3px dashed var(--dash);
+}
+
+/* Walked end to end, the rail stops being a route and becomes a record of one. */
+.path-list-complete::before {
+    border-left-style: solid;
+    border-left-color: var(--amber-line);
+}
+
+.path-step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--path-gap);
+}
+
+.path-group {
+    display: block;
+    padding-left: calc(var(--path-circle) + 20px);
+    font-size: 0.66rem;
+    line-height: var(--path-group);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--locked);
+}
+
+.path-step+.path-step .path-group {
+    margin-top: 6px;
+}
+
+/* Positioned, so the rows paint over the rail rather than under it. */
+.path-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    text-align: left;
+}
+
+/* Upcoming is the base state: an outline of a stop, not yet a stop. */
+.path-mark {
+    flex: none;
+    width: var(--path-circle);
+    height: var(--path-circle);
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px dashed var(--dash);
+    color: var(--tile-used-text);
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.path-row-done .path-mark {
+    background: var(--amber);
+    border: none;
+    color: var(--on-accent);
+    font-size: 1.35rem;
+    box-shadow: 0 3px 0 var(--tile-shadow);
+}
+
+.path-row-current .path-mark {
+    background: var(--coral);
+    border: 3px solid var(--coral-line);
+    color: var(--on-accent);
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    box-shadow: 0 5px 0 var(--coral-deep);
+    animation: bob 2.6s ease-in-out infinite;
+}
+
+.path-row-current:active .path-mark {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 var(--coral-deep);
+    animation: none;
+}
+
+.path-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.path-ref {
+    display: block;
+    font-family: var(--serif);
+    font-size: 1.05rem;
     font-weight: 700;
     color: var(--locked);
-    margin-top: 14px;
+}
+
+.path-row-done .path-ref {
+    color: var(--soft);
+}
+
+.path-row-current .path-ref {
+    color: var(--ink);
+}
+
+.path-meta {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--locked);
+    margin-top: 2px;
+}
+
+.path-row-current .path-meta {
+    color: var(--soft);
+}
+
+.path-pill {
+    flex: none;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: var(--coral-wash);
+    color: var(--coral-text);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/*
+ * The way in stays reachable however long the path runs: the button sticks to
+ * the viewport just above the tab bar while the stops scroll behind it, and
+ * comes to rest in that same place at the end of the list, where the shell's
+ * own bottom padding leaves it.
+ */
+/* Out of the scroll entirely: the way in is always where it was last time. */
+.path-dock {
+    flex: none;
+    padding-top: 6px;
 }
 
 /* The Today tab's CTA — bigger, centered, no arrow. */
@@ -1039,6 +1201,25 @@ a:hover {
     margin-top: 3px;
 }
 
+/* The day is already kept, so the offer of more is made quietly. */
+.cta-outline {
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    color: var(--coral-text);
+    box-shadow: 0 5px 0 var(--line);
+}
+
+.cta-outline:active {
+    box-shadow: 0 2px 0 var(--line);
+}
+
+/* On the filled button the sub-line is dimmed white; here it needs a colour
+   of its own, or it inherits the coral of the title. */
+.cta-outline .cta-sub {
+    color: var(--soft);
+    opacity: 1;
+}
+
 @keyframes bob {
 
     0%,
@@ -1048,6 +1229,12 @@ a:hover {
 
     50% {
         transform: translateY(-3px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .path-row-current .path-mark {
+        animation: none;
     }
 }
 
@@ -1285,6 +1472,13 @@ a:hover {
     letter-spacing: 0;
     text-transform: none;
     padding: 5px 12px;
+}
+
+/* The streak in the Today header takes an edge the session's blank counter
+   doesn't: it sits on the bare page beside the settings button rather than
+   inside a card, and without it the wash alone barely holds a shape. */
+.streak-badge {
+    border: 1.5px solid var(--amber-line);
 }
 
 /* --- All tab: the hundred -------------------------------------------------- */

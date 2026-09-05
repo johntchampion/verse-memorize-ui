@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Alert from '../components/Alert';
 import { useAuth } from '../context/auth';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,7 +68,6 @@ export default function Login() {
             required
           />
         </div>
-        {error && <p className="error-text" role="alert">{error}</p>}
         <button className="btn" type="submit" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
@@ -75,6 +75,14 @@ export default function Login() {
       <p className="small muted" style={{ fontWeight: 700, marginTop: 20 }}>
         New here? <Link to="/signup">Create an account</Link>
       </p>
+      <Alert
+        open={error !== null}
+        title="Couldn&rsquo;t sign in"
+        message={error ?? ''}
+        primaryLabel="OK"
+        onPrimary={() => setError(null)}
+        onClose={() => setError(null)}
+      />
     </main>
   );
 }

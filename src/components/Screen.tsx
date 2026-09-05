@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import Alert from './Alert'
 import TabBar from './TabBar'
 
 /**
@@ -41,14 +43,11 @@ interface Props {
   loading?: boolean
   loadingLabel?: string
 
-  /** Non-null replaces the children with the retry block. */
+  /** Non-null opens the alert on top of the children, which stay put underneath. */
   error?: string | null
   onRetry?: () => void
-  /** Extra controls under the retry button, e.g. VerseDetail's "Back". */
+  /** Extra controls under the alert's buttons, e.g. VerseDetail's "Back". */
   errorActions?: ReactNode
-  /** Wrapper for the error block; Today centres it in its hero. */
-  errorClassName?: string
-  errorStyle?: CSSProperties
 
   children: ReactNode
 }
@@ -66,12 +65,16 @@ export default function Screen({
   error = null,
   onRetry,
   errorActions,
-  errorClassName = 'stack',
-  errorStyle = { marginTop: 20 },
   children,
 }: Props) {
   const shell = className ? `${SHELL[layout]} ${className}` : SHELL[layout]
   const hasHeader = leading || title || trailing
+
+  // An error the user has already waved off stays dismissed until a fresh
+  // one comes in — otherwise closing the alert would just pop it back open
+  // on the next render, since the error itself lives in the caller's hook.
+  const [dismissed, setDismissed] = useState<string | null>(null)
+  const dismiss = () => setDismissed(error)
 
   const main = (
     <main className={shell} aria-busy={loading}>
@@ -98,19 +101,22 @@ export default function Screen({
         </span>
       )}
 
-      {error !== null ? (
-        <div className={errorClassName} style={errorStyle}>
-          <p className='error-text'>{error}</p>
-          {onRetry && (
-            <button className='btn-ghost' onClick={onRetry}>
-              Try again
-            </button>
-          )}
-          {errorActions}
-        </div>
-      ) : (
-        children
-      )}
+      {children}
+
+      <Alert
+        open={error !== null && error !== dismissed}
+        title='Something went wrong'
+        message={error ?? ''}
+        tone='warning'
+        primaryLabel={onRetry ? 'Try again' : 'OK'}
+        onPrimary={onRetry ?? dismiss}
+        // A route that supplies its own way out (e.g. VerseDetail's "Back to
+        // verses") doesn't also need the generic dismiss.
+        secondaryLabel={onRetry && !errorActions ? 'Dismiss' : undefined}
+        onSecondary={onRetry && !errorActions ? dismiss : undefined}
+        onClose={dismiss}
+        extra={errorActions}
+      />
     </main>
   )
 

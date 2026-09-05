@@ -57,7 +57,6 @@ export default function Settings() {
       loadingLabel='Loading settings…'
       error={me.error}
       onRetry={me.refetch}
-      errorStyle={{}}
     >
       <AccountCard user={me.data?.user ?? null} />
 

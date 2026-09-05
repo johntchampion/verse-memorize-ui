@@ -80,22 +80,36 @@ export default function Today() {
       error={both.error}
       onRetry={both.refetch}
     >
-      <div className={path?.total === 0 ? 'path-intro path-intro-alone' : 'path-intro'}>
-        <h1 className='path-head'>
-          {copy?.head ?? <Skeleton variant='text' w='62%' />}
-        </h1>
-        <p className='path-sub'>
-          {copy?.sub ?? <Skeleton variant='text' w='84%' />}
-        </p>
-      </div>
-
-      <PathList nodes={path?.nodes ?? null} complete={path?.complete ?? false} />
-
-      {/* Nothing due and nothing slotted leaves no button to dock. */}
-      {(!path || path.total > 0) && (
-        <div className='path-dock'>
-          <PathCta path={path} />
+      {path?.complete ? (
+        <div className='path-done-wrap'>
+          <div className='path-done'>
+            <span className='path-done-check' aria-hidden='true'>
+              ✓
+            </span>
+            <h1 className='path-done-title'>
+              Today’s path
+              <br />
+              is done!
+            </h1>
+            <p className='path-done-sub'>{copy?.sub}</p>
+          </div>
+          <div className='path-dock'>
+            <PathCta path={path} />
+          </div>
         </div>
+      ) : (
+        <>
+          <div className={path?.total === 0 ? 'path-intro path-intro-alone' : 'path-intro'}>
+            <h1 className='path-head'>
+              {copy?.head ?? <Skeleton variant='text' w='62%' />}
+            </h1>
+            <p className='path-sub'>
+              {copy?.sub ?? <Skeleton variant='text' w='84%' />}
+            </p>
+          </div>
+
+          <PathList nodes={path?.nodes ?? null} />
+        </>
       )}
     </Screen>
   )

@@ -1054,12 +1054,6 @@ a:hover {
     border-left: 3px dashed var(--dash);
 }
 
-/* Walked end to end, the rail stops being a route and becomes a record of one. */
-.path-list-complete::before {
-    border-left-style: solid;
-    border-left-color: var(--amber-line);
-}
-
 .path-step {
     display: flex;
     flex-direction: column;
@@ -1174,16 +1168,9 @@ a:hover {
     text-transform: uppercase;
 }
 
-/*
- * The way in stays reachable however long the path runs: the button sticks to
- * the viewport just above the tab bar while the stops scroll behind it, and
- * comes to rest in that same place at the end of the list, where the shell's
- * own bottom padding leaves it.
- */
-/* Out of the scroll entirely: the way in is always where it was last time. */
 .path-dock {
     flex: none;
-    padding-top: 6px;
+    margin-top: 28px;
 }
 
 /* The Today tab's CTA — bigger, centered, no arrow. */
@@ -1218,6 +1205,60 @@ a:hover {
 .cta-outline .cta-sub {
     color: var(--soft);
     opacity: 1;
+}
+
+/*
+ * Once the day's path is behind you there's nothing left to walk, so the path
+ * itself is gone rather than sitting there finished — replaced by this
+ * full-screen close instead. The close and the button under it centre as one
+ * group, so the button reads as part of it rather than docked at the tab bar.
+ */
+.path-done-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.path-done {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 10px;
+}
+
+.path-done-check {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: var(--amber);
+    color: var(--on-accent);
+    display: grid;
+    place-items: center;
+    font-size: 2.6rem;
+    font-weight: 800;
+    box-shadow: 0 5px 0 var(--amber-deep);
+    animation: pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.path-done-title {
+    font-family: var(--serif);
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-top: 22px;
+}
+
+.path-done-sub {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--amber-text);
+    margin-top: 12px;
+    line-height: 1.5;
+    text-wrap: pretty;
 }
 
 @keyframes bob {

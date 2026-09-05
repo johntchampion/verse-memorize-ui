@@ -76,20 +76,14 @@ function PathSkeleton() {
 
 /**
  * Today's stops, drawn down a single rail: what's been done, where you are,
- * and what's still ahead. The rail turns solid gold once the whole path is
- * behind you.
+ * and what's still ahead. Only rendered while the path is still being
+ * walked — once it's done, Today swaps in a full-screen finish instead.
  *
- * This is the only part of the screen that scrolls — the heading above and the
- * button below hold their places — and a day far enough along that the live
- * stop starts off screen scrolls itself to it.
+ * This is the only part of the screen that scrolls — the heading above holds
+ * its place — and a day far enough along that the live stop starts off screen
+ * scrolls itself to it.
  */
-export default function PathList({
-  nodes,
-  complete,
-}: {
-  nodes: PathNode[] | null
-  complete: boolean
-}) {
+export default function PathList({ nodes }: { nodes: PathNode[] | null }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLAnchorElement>(null)
   const currentIndex = nodes
@@ -117,7 +111,7 @@ export default function PathList({
 
   return (
     <div className='path-scroll' ref={scrollRef}>
-      <div className={complete ? 'path-list path-list-complete' : 'path-list'}>
+      <div className='path-list'>
         {nodes.map((node) => (
           <div className='path-step' key={node.index}>
             {node.group && <span className='path-group'>{node.group}</span>}

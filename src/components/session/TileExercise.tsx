@@ -119,6 +119,10 @@ export default function TileExercise({
   const dockRef = useRef<HTMLDivElement | null>(null)
   const bankRef = useRef<HTMLDivElement | null>(null)
   const isRotating = useRef(false)
+  /** First run of the scroll effect is the exercise mounting, not a blank
+   * being filled — that always lands at the top rather than running the
+   * out-of-view calculation against whatever scroll the prior exercise left. */
+  const hasScrolledOnce = useRef(false)
   /** Blocks top-ups after a trim so trim and top-up can't ping-pong. */
   const windowIsFull = useRef(false)
 
@@ -173,14 +177,26 @@ export default function TileExercise({
   // Keeps whatever has to be tapped next in view above the dock. During the
   // reference phase, scrolling the page to the very top (rather than just
   // bringing the reference line to the dock's edge) is what brings the whole
-  // finished verse back into view above it, so the words are there to be placed.
+  // finished verse back into view above it, so the words are there to be
+  // placed — done unconditionally every time the phase is (re-)entered,
+  // not just when the reference line happens to have drifted out of view.
   useEffect(() => {
+    const firstRun = !hasScrolledOnce.current
+    hasScrolledOnce.current = true
+
     if (refStep) {
-      const target = refLineRef.current
-      if (!target || !isOutOfView(target, dockRef.current)) return
-      window.scrollTo({ top: 0, behavior: scrollBehavior() })
+      window.scrollTo({ top: 0, behavior: firstRun ? 'auto' : scrollBehavior() })
       return
     }
+
+    // The exercise mounting, not a blank getting filled: land where it
+    // starts, scrolled up so the progress bar and verse reference are in
+    // view, regardless of where the previous exercise left the page scrolled.
+    if (firstRun) {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      return
+    }
+
     const target = currentBlankRef.current
     const dock = dockRef.current
     if (!target || !isOutOfView(target, dock)) return

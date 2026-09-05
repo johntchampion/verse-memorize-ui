@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Alert from '../components/Alert';
 import { useAuth } from '../context/auth';
 import AppIcon from '../components/AppIcon';
 
@@ -68,7 +69,6 @@ export default function Signup() {
             required
           />
         </div>
-        {error && <p className="error-text" role="alert">{error}</p>}
         <button className="btn" type="submit" disabled={submitting}>
           {submitting ? 'Creating account…' : 'Create account'}
         </button>
@@ -76,6 +76,14 @@ export default function Signup() {
       <p className="small muted" style={{ fontWeight: 700, marginTop: 20 }}>
         Already practicing? <Link to="/login">Sign in</Link>
       </p>
+      <Alert
+        open={error !== null}
+        title="Couldn&rsquo;t create your account"
+        message={error ?? ''}
+        primaryLabel="OK"
+        onPrimary={() => setError(null)}
+        onClose={() => setError(null)}
+      />
     </main>
   );
 }

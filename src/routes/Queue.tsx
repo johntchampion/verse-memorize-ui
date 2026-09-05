@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { api } from '../api/client'
+import Alert from '../components/Alert'
 import Screen, { BackButton } from '../components/Screen'
 import { SkeletonText } from '../components/Skeleton'
 import TranslationTag from '../components/TranslationTag'
@@ -155,8 +156,6 @@ export default function Queue() {
         </button>
       </div>
 
-      {saveError && <p className='error-text'>{saveError}</p>}
-
       <QueueSlots slots={slotsData} verses={verseList} />
 
       <div className='eyebrow queue-waiting-label'>Waiting in line</div>
@@ -179,6 +178,16 @@ export default function Queue() {
           onClose={() => setThemeSheet(false)}
         />
       )}
+
+      <Alert
+        open={saveError !== null}
+        title='Something went wrong'
+        message={saveError ?? ''}
+        tone='warning'
+        primaryLabel='OK'
+        onPrimary={() => setSaveError(null)}
+        onClose={() => setSaveError(null)}
+      />
     </Screen>
   )
 }

@@ -67,11 +67,14 @@ export default function VerseDetail() {
       error={detail.error}
       onRetry={detail.refetch}
       errorActions={
-        <button className='btn-ghost' onClick={back}>
+        <button
+          className='btn-quiet'
+          style={{ width: '100%', marginTop: 8 }}
+          onClick={back}
+        >
           Back to verses
         </button>
       }
-      errorStyle={{}}
     >
       <VerseCard detail={data} />
       <SoonerCard

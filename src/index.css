@@ -1814,6 +1814,93 @@ a:hover {
     font-weight: 700;
 }
 
+/* --- Modal alert ------------------------------------------------------ */
+
+.alert-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(43, 37, 33, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+    .alert-overlay {
+        background: rgba(0, 0, 0, 0.6);
+    }
+}
+
+.alert-overlay-visible {
+    opacity: 1;
+}
+
+.alert-card {
+    width: 100%;
+    max-width: 340px;
+    background: var(--cream);
+    border-radius: var(--radius-lg);
+    padding: 26px 24px 22px;
+    box-shadow: 0 20px 40px rgba(43, 37, 33, 0.3);
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 180ms ease, transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alert-card:focus {
+    outline: none;
+}
+
+.alert-card-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.alert-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.alert-icon-danger {
+    background: var(--coral-wash);
+    color: var(--coral-text);
+}
+
+.alert-icon-warning {
+    background: var(--amber-wash);
+    color: var(--amber-soft);
+}
+
+.alert-title {
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin-top: 16px;
+    text-wrap: pretty;
+}
+
+.alert-message {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--soft);
+    margin-top: 8px;
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+
 /* --- Auth screens --------------------------------------------------------- */
 
 .auth-shell {

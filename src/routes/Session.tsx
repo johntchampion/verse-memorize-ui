@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { SessionExercise } from '../api/types'
+import Alert from '../components/Alert'
 import SessionComplete from '../components/session/SessionComplete'
 import SessionHeader from '../components/session/SessionHeader'
 import SessionSkeleton from '../components/session/SessionSkeleton'
@@ -39,6 +40,7 @@ const TOAST_MS = 2500
  */
 export default function Session() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const practice = searchParams.get('practice') === '1'
 
   const [phase, setPhase] = useState<Phase>('loading')
@@ -189,35 +191,43 @@ export default function Session() {
     }
   }
 
-  if (error) {
-    return (
-      <main className='shell stack'>
-        <p className='error-text' role='alert'>
-          {error.message}
-        </p>
-        <button className='btn' onClick={error.retry}>
-          Try again
-        </button>
-        <Link to='/' className='btn-ghost'>
-          Back to home
-        </Link>
-      </main>
-    )
-  }
+  // Portals over whatever the phase below renders, so a mid-session failure
+  // leaves the exercise (or skeleton, or "wrapping up") in view underneath.
+  const errorAlert = (
+    <Alert
+      open={error !== null}
+      title='Something went wrong'
+      message={error?.message ?? ''}
+      tone='warning'
+      primaryLabel='Try again'
+      onPrimary={() => error?.retry()}
+      secondaryLabel='Back to home'
+      onSecondary={() => navigate('/')}
+      onClose={() => setError(null)}
+    />
+  )
 
   if (phase === 'loading') {
-    return <SessionSkeleton />
+    return (
+      <>
+        <SessionSkeleton />
+        {errorAlert}
+      </>
+    )
   }
 
   // Not a load of content but a submit after it: there is nothing left on
   // screen to hold a placeholder's shape.
   if (phase === 'finishing') {
     return (
-      <main className='shell'>
-        <p className='muted' role='status'>
-          Wrapping up…
-        </p>
-      </main>
+      <>
+        <main className='shell'>
+          <p className='muted' role='status'>
+            Wrapping up…
+          </p>
+        </main>
+        {errorAlert}
+      </>
     )
   }
 
@@ -289,6 +299,7 @@ export default function Session() {
           onComplete={(correct) => void submit(correct)}
         />
       )}
+      {errorAlert}
     </main>
   )
 }

@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- App icon: three lines of verse, the last still to fill in. -->
-  <rect width="1024" height="1024" fill="#FFF6EA"/>
-  <rect x="180" y="276" width="664" height="88" rx="44" fill="#2B2521"/>
-  <rect x="180" y="468" width="451.5" height="88" rx="44" fill="#2B2521"/>
-  <rect x="180" y="660" width="557.8" height="88" rx="44" fill="#F2A93B"/>
+  <!-- App icon: the blank itself, edge to edge. Blush + coral. -->
+  <path d="M224,0 H800 A224,224 0 0 1 1024,224 V800 H0 V224 A224,224 0 0 1 224,0 Z" fill="#F9C9BC"/>
+  <rect x="0" y="800" width="1024" height="224" fill="#C6462F"/>
 </svg>

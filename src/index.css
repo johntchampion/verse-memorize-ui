@@ -1829,14 +1829,6 @@ a:hover {
 .auth-logo {
     width: 56px;
     height: 56px;
-    border-radius: 18px;
-    background: var(--coral);
-    display: grid;
-    place-items: center;
-    font-family: var(--serif);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--on-accent);
     margin-bottom: 18px;
 }
 

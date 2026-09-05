@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
+import AppIcon from '../components/AppIcon';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -35,8 +36,8 @@ export default function Login() {
 
   return (
     <main className="auth-shell">
-      <div className="auth-logo" aria-hidden="true">
-        V
+      <div className="auth-logo">
+        <AppIcon />
       </div>
       <h1 className="auth-title">Welcome back.</h1>
       <p className="muted" style={{ fontWeight: 600, marginBottom: 26 }}>

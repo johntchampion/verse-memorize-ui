@@ -22,5 +22,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* Own project (tsconfig.worker.json): it needs lib WebWorker, not DOM. */
+  "exclude": ["src/sw.ts"]
 }

@@ -57,13 +57,18 @@ src/
                        refresh works)
   context/AuthContext.tsx
   hooks/useApi.ts      fetch-on-mount + loading/error + refetch
+  hooks/usePushReminders.ts  reconciles the account preference with this
+                       browser's PushSubscription; owns the toggle's states
+  sw.ts                the service worker: precache, navigation fallback,
+                       push and notificationclick
+  lib/push.ts          permission, subscribe/unsubscribe, capability checks
   lib/exercise.ts      exercise parsing, answer derivation, progression labels
   lib/path.ts          today's session read as a path of stops, for the Today tab
   lib/dates.ts         user-timezone day boundaries (mirrors the API's)
   routes/              one file per screen: Onboarding, Login, Signup, Today,
                        Practicing, AllVerses, Session, VerseDetail, Settings
   components/          TileExercise, TypedExercise, SlotRow, StageLadder,
-                       TabBar, ProgressBar, TranslationTag
+                       TabBar, ProgressBar, TranslationTag, settings/ToggleCard
   index.css            the whole design system (tokens + component classes)
 ```
 
@@ -235,14 +240,62 @@ colors; gilt specifically means "achievement", don't spend it on chrome.
 
 ## PWA
 
-`vite-plugin-pwa` (`registerType: 'autoUpdate'`) precaches the app shell so
-repeat launches are fast and the app is installable (manifest + iOS meta tags
-in `index.html`; placeholder icons in `public/icons/`). The app is **not**
-offline-functional by design — session data and attempt submission require the
-network. Note the service worker only registers in production
-builds; use `npm run build && npm run preview` to test install behavior.
+`vite-plugin-pwa` precaches the app shell so repeat launches are fast and the
+app is installable (manifest + iOS meta tags in `index.html`; icons in
+`public/icons/`). The app is **not** offline-functional by design — session data
+and attempt submission require the network.
+
+The worker is **hand-written** at [`src/sw.ts`](./src/sw.ts) and built with
+`strategies: 'injectManifest'`, because push notifications need a `push`
+handler and a generated worker has nowhere to put one. That swap moves three
+responsibilities from the plugin to us, and all three fail quietly:
+
+1. **`skipWaiting()` / `clientsClaim()`.** `registerType: 'autoUpdate'` still
+   sets these — but on the options only `generateSW` reads. Under
+   `injectManifest` `sw.ts` must call them itself, or every install is stranded
+   on the worker it first saw. This one can only be caught on the *second*
+   deploy after a change, so check it there.
+2. **The navigation fallback.** `generateSW` served `index.html` for
+   navigations by default; `sw.ts` re-registers it with `NavigationRoute` +
+   `createHandlerBoundToURL`. Without it a cold launch straight to `/settings`
+   404s. It is skipped when the precache is empty, which is the case under
+   `vite dev`.
+3. **`cleanupOutdatedCaches()`**, or old precaches accumulate forever.
+
+`src/sw.ts` needs `lib: WebWorker` where the app needs `DOM`, so it has its own
+project (`tsconfig.worker.json`, referenced from `tsconfig.json` so `tsc -b`
+checks it) and its own ESLint globals block.
+
+Unlike before, the worker **does** register under `vite dev`
+(`devOptions.enabled`), because push only works in a secure context and
+`localhost` is the one available for free. Nothing is precached in dev, so
+pages stay live. Use `npm run build && npm run preview` to test install
+behaviour and the precache.
+
+### Testing push locally
+
+`http://localhost:5173` counts as a secure context, so desktop Chrome works
+under `npm run dev`. A phone on the LAN (`http://192.168.x.x:5173`) does
+**not** — no service worker, no push, no diagnostics — and iOS additionally
+requires the app to be installed to the Home Screen, which requires a real
+origin. In practice: deploy to the real HTTPS host and use the settings
+screen's **Send a test notification** button, which hits `POST /api/push/test`
+and makes the loop fast. A tunnel (ngrok/Cloudflare) with the API proxied
+through the same hostname is the fallback. Avoid `@vitejs/plugin-basic-ssl` —
+a self-signed certificate can block service-worker registration outright on
+iOS.
+
+The API needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set, or
+`GET /api/push/key` answers `503` and the toggle renders as unavailable.
 
 ## Out of scope for v1
 
-Offline exercise-taking, push notifications, dark mode, admin/verse-editing
-UI, and anything beyond simple CSS transitions.
+Offline exercise-taking, dark mode, admin/verse-editing UI, and anything beyond
+simple CSS transitions.
+
+Push notifications are built, with one caveat worth setting expectations about:
+on iOS, Web Push exists only in a PWA installed to the Home Screen (16.4+), the
+APIs are simply absent in a Safari tab, and a denied permission is effectively
+permanent short of deleting and re-adding the app. The toggle detects all of
+that and explains it, but a real fraction of iPhone users will never get
+through it.

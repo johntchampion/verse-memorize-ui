@@ -4,9 +4,11 @@ import { api } from '../api/client'
 import Screen, { BackLink } from '../components/Screen'
 import AccountCard from '../components/settings/AccountCard'
 import PreferenceCard from '../components/settings/PreferenceCard'
+import ToggleCard from '../components/settings/ToggleCard'
 import { useAuth } from '../context/auth'
 import { useApi } from '../hooks/useApi'
 import { usePreference } from '../hooks/usePreference'
+import { usePushReminders } from '../hooks/usePushReminders'
 
 function timezoneOptions(current: string): string[] {
   const zones =
@@ -41,6 +43,11 @@ export default function Settings() {
     (value) => api.updateProfile({ translation: value }),
     me.refetch,
     'Could not save the translation.',
+  )
+
+  const reminders = usePushReminders(
+    me.data?.user.remindersEnabled,
+    me.refetch,
   )
 
   function signOut() {
@@ -93,6 +100,26 @@ export default function Settings() {
         pref={timezone}
         saveLabel='Save timezone'
       />
+
+      <ToggleCard
+        eyebrow='Daily reminder'
+        description='A nudge to practise, half an hour after the time you usually start — and never later than 9pm.'
+        checked={reminders.enabled}
+        busy={reminders.busy}
+        unavailable={reminders.unavailableMessage}
+        hint={reminders.hint}
+        error={reminders.error}
+        onChange={reminders.toggle}
+      >
+        {reminders.state === 'on' && (
+          <button
+            className='btn-ghost'
+            onClick={() => void reminders.sendTest()}
+          >
+            Send a test notification
+          </button>
+        )}
+      </ToggleCard>
 
       <button
         className='btn-ghost'

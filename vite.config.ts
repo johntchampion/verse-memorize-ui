@@ -9,6 +9,15 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     VitePWA({
+      // injectManifest rather than the default generateSW: a generated worker
+      // has no way to carry a `push` handler, and bolting one on with
+      // workbox.importScripts would park it in an untyped, unbundled file in
+      // public/ with its own versioning problem. The cost is that src/sw.ts now
+      // owns three things generateSW did silently -- skipWaiting/clientsClaim,
+      // the navigation fallback, and cleanupOutdatedCaches. See the README.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
@@ -26,6 +35,17 @@ export default defineConfig({
           { src: '/icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
+      injectManifest: {
+        // Spelled out because injectManifest has no default of its own: the
+        // icons and the webmanifest have to be precached too, or an offline
+        // launch renders the shell without them.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+      },
+      // Push only works in a secure context, and localhost is the one we get
+      // for free -- so the worker has to register under `vite dev` or there is
+      // no way to test any of this without deploying. The injected manifest is
+      // empty in dev, so nothing is precached and pages stay live.
+      devOptions: { enabled: true, type: 'module' },
     }),
   ],
   server: {

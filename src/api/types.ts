@@ -97,6 +97,8 @@ export interface MeResponse {
     timezone: string
     translation: string
     createdAt: string
+    /** The daily-reminder opt-in. Off until the user turns it on. */
+    remindersEnabled: boolean
   }
   streak: number
   completedToday: boolean
@@ -292,4 +294,17 @@ export interface TranslationOption {
 export interface TranslationsResponse {
   translations: TranslationOption[]
   default: string
+}
+
+/** The server's VAPID public key, for PushManager.subscribe. */
+export interface PushKeyResponse {
+  publicKey: string
+}
+
+/** What a fan-out to the caller's devices did. */
+export interface PushTestResponse {
+  sent: number
+  /** Endpoints the push service reported dead, now deleted. */
+  removed: number
+  failed: number
 }

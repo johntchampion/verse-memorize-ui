@@ -288,6 +288,68 @@ a:hover {
     to { transform: rotate(360deg); }
 }
 
+/* A switch built on a real checkbox: the input carries the state and the
+   keyboard behaviour, the track and thumb are what you see. */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.toggle-track {
+    flex: none;
+    position: relative;
+    width: 56px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--track);
+    border: 1.5px solid var(--line);
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 120ms ease;
+}
+
+.toggle-input:checked + .toggle-track {
+    background: var(--coral);
+    border-color: var(--coral-deep);
+}
+
+.toggle-input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(24px);
+}
+
+.toggle-input:focus-visible + .toggle-track {
+    outline: 2px solid var(--coral);
+    outline-offset: 2px;
+}
+
+.toggle-input:disabled + .toggle-track {
+    opacity: 0.6;
+}
+
+.toggle-label {
+    font-weight: 800;
+}
+
 .btn-ghost {
     display: block;
     width: 100%;

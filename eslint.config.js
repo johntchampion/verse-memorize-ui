@@ -19,4 +19,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // The service worker runs off the main thread: no window, no document, and
+    // a `self` that is a ServiceWorkerGlobalScope.
+    files: ['src/sw.ts'],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
 ])

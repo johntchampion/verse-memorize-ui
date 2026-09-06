@@ -3,6 +3,8 @@ import type {
   AuthResponse,
   ExerciseType,
   MeResponse,
+  PushKeyResponse,
+  PushTestResponse,
   QueueResponse,
   SessionCompleteResponse,
   SessionTodayResponse,
@@ -133,13 +135,41 @@ export const api = {
 
   me: () => request<MeResponse>('/api/me'),
 
-  // Both preferences share one endpoint. The API rejects an empty body, so
+  // Every preference shares one endpoint. The API rejects an empty body, so
   // the caller passes exactly the field it is changing.
-  updateProfile: (patch: { timezone?: string; translation?: string }) =>
-    request<MeResponse>('/api/me', { method: 'PATCH', body: patch }),
+  updateProfile: (patch: {
+    timezone?: string
+    translation?: string
+    remindersEnabled?: boolean
+  }) => request<MeResponse>('/api/me', { method: 'PATCH', body: patch }),
 
   /** The translations a user can pick between, for the Settings picker. */
   translations: () => request<TranslationsResponse>('/api/translations'),
+
+  // --- Push notifications ---------------------------------------------------
+
+  /** 503 when the deployment has no VAPID keys, which is how the settings
+      toggle knows to render as unavailable rather than as broken. */
+  pushKey: () => request<PushKeyResponse>('/api/push/key'),
+
+  /** Registers this browser. Idempotent on the subscription's endpoint, so a
+      client may safely re-send it on every launch. */
+  pushSubscribe: (subscription: PushSubscriptionJSON) =>
+    request<{ subscribed: true }>('/api/push/subscribe', {
+      method: 'POST',
+      body: subscription,
+    }),
+
+  pushUnsubscribe: (endpoint: string) =>
+    request<{ subscribed: false }>('/api/push/unsubscribe', {
+      method: 'POST',
+      body: { endpoint },
+    }),
+
+  /** Sends the reminder to the caller's own devices now, so a phone can be
+      checked without waiting for 9pm. */
+  pushTest: () =>
+    request<PushTestResponse>('/api/push/test', { method: 'POST' }),
 
   /** Today's plan, resumable — or with `practice`, a drill of the slotted
       verses that counts toward nothing and can be asked for repeatedly. */

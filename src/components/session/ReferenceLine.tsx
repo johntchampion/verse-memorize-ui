@@ -1,4 +1,3 @@
-import type { RefObject } from 'react'
 import type { ReferenceStep } from '../../lib/reference'
 
 /** Placeholder for a slot with nothing in it; the CSS gives it its width. */
@@ -25,17 +24,15 @@ type SlotState = 'filled' | 'current' | 'empty'
 export default function ReferenceLine({
   steps,
   filled,
-  lineRef,
 }: {
   steps: ReferenceStep[]
   filled: number
-  lineRef: RefObject<HTMLParagraphElement | null>
 }) {
   const stateOf = (at: number): SlotState =>
     at < filled ? 'filled' : at === filled ? 'current' : 'empty'
 
   return (
-    <p className='verse-ref ref-line' ref={lineRef}>
+    <p className='verse-ref ref-line'>
       <RefSlot step={steps[0]} state={stateOf(0)} />
       <span className='ref-locus'>
         <RefSlot step={steps[1]} state={stateOf(1)} />

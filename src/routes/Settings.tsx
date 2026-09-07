@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api/client'
+import { ApiError, api } from '../api/client'
+import Alert from '../components/Alert'
 import Screen, { BackLink } from '../components/Screen'
 import AccountCard from '../components/settings/AccountCard'
 import PreferenceCard from '../components/settings/PreferenceCard'
@@ -45,14 +46,47 @@ export default function Settings() {
     'Could not save the translation.',
   )
 
-  const reminders = usePushReminders(
-    me.data?.user.remindersEnabled,
-    me.refetch,
-  )
+  const reminders = usePushReminders(me.data?.user.remindersEnabled, me.refetch)
 
   function signOut() {
     logout()
     navigate('/login', { replace: true })
+  }
+
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  function openDeleteAccount() {
+    setDeletePassword('')
+    setDeleteError(null)
+    setDeleteOpen(true)
+  }
+
+  function closeDeleteAccount() {
+    if (deleting) return
+    setDeleteOpen(false)
+  }
+
+  async function deleteAccount() {
+    if (deleting) return
+    if (!deletePassword) {
+      setDeleteError('Enter your password to confirm.')
+      return
+    }
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await api.deleteAccount(deletePassword)
+      logout()
+      navigate('/signup', { replace: true })
+    } catch (err) {
+      setDeleting(false)
+      setDeleteError(
+        err instanceof ApiError ? err.message : 'Something went wrong.',
+      )
+    }
   }
 
   return (
@@ -128,6 +162,55 @@ export default function Settings() {
       >
         Sign out
       </button>
+
+      <button
+        className='btn-ghost'
+        onClick={openDeleteAccount}
+        style={{ color: 'var(--coral-text)' }}
+      >
+        Delete account
+      </button>
+
+      <Alert
+        open={deleteOpen}
+        title='Delete account?'
+        message={
+          <>
+            This permanently erases your account, verses, and progress — it
+            can't be undone.
+            <span className='field' style={{ marginTop: 16 }}>
+              <input
+                id='delete-password'
+                type='password'
+                autoComplete='current-password'
+                placeholder='Your password'
+                value={deletePassword}
+                disabled={deleting}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void deleteAccount()
+                }}
+              />
+            </span>
+            {deleteError && (
+              <span
+                className='error-text'
+                role='alert'
+                style={{ marginTop: 8, display: 'block' }}
+              >
+                {deleteError}
+              </span>
+            )}
+          </>
+        }
+        tone='danger'
+        primaryLabel={deleting ? 'Deleting…' : 'Delete account'}
+        onPrimary={() => void deleteAccount()}
+        secondaryLabel='Cancel'
+        onSecondary={closeDeleteAccount}
+        onClose={closeDeleteAccount}
+        dismissible={!deleting}
+      />
     </Screen>
   )
 }

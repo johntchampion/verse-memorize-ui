@@ -1,6 +1,7 @@
 import type {
   AttemptOutcome,
   AuthResponse,
+  DeleteAccountResponse,
   ExerciseType,
   MeResponse,
   PushKeyResponse,
@@ -101,9 +102,12 @@ async function request<T>(
   // A 401 means the token itself is invalid/expired. "user not found" means
   // the token is still well-formed but the account behind it is gone (e.g.
   // the user deleted their account) — both leave the client stuck with a
-  // dead session, so both are treated as a logout.
+  // dead session, so both are treated as a logout. delete-account's own 401
+  // means something else entirely (a wrong password on an otherwise-valid
+  // session), so it's excluded here and left for its caller to handle.
   if (
     !path.startsWith('/auth') &&
+    path !== '/api/me/delete-account' &&
     (res.status === 401 || message === 'user not found')
   ) {
     clearSession()
@@ -142,6 +146,14 @@ export const api = {
     translation?: string
     remindersEnabled?: boolean
   }) => request<MeResponse>('/api/me', { method: 'PATCH', body: patch }),
+
+  /** Permanently deletes the account and everything derived from it. The
+      password re-confirms intent since this can't be undone. */
+  deleteAccount: (password: string) =>
+    request<DeleteAccountResponse>('/api/me/delete-account', {
+      method: 'POST',
+      body: { password },
+    }),
 
   /** The translations a user can pick between, for the Settings picker. */
   translations: () => request<TranslationsResponse>('/api/translations'),

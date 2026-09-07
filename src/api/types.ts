@@ -308,3 +308,8 @@ export interface PushTestResponse {
   removed: number
   failed: number
 }
+
+// POST /api/me/delete-account
+export interface DeleteAccountResponse {
+  deleted: true
+}

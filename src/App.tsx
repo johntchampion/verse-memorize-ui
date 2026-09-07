@@ -4,7 +4,7 @@ import NavStack from './components/NavStack';
 import { useAuth } from './context/auth';
 import AllVerses from './routes/AllVerses';
 import Login from './routes/Login';
-import Onboarding from './routes/Onboarding';
+import Onboarding from './routes/onboarding/Onboarding';
 import Practicing from './routes/Practicing';
 import Queue from './routes/Queue';
 import Session from './routes/Session';

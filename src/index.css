@@ -924,7 +924,7 @@ a:hover {
  * .nav-transit below), and the dock would jump as the fade began.
  */
 .session-wrapping>:not(header):not(.wrap-note) {
-    opacity: 0.32;
+    opacity: 0;
     transition: opacity 260ms ease;
     pointer-events: none;
 }

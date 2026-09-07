@@ -1,10 +1,8 @@
 import { randomIndex, wordsMatch, wordsMatchExactly } from './exercise'
 
-/**
- * A review exercise blanks every word, so its bank can run to 80+ tiles — more
- * than the three docked rows hold. These are the pure window moves; the caller
- * measures the DOM and decides when to make them.
- */
+/** A review exercise blanks every word, so its bank can run past what the
+    three docked rows hold. These are the pure window moves; the caller
+    measures the DOM and decides when to make them. */
 
 export const BANK_ROWS = 3
 
@@ -57,11 +55,8 @@ export function withAnswerSpelling(
   return traded
 }
 
-/**
- * Sends tiles past `capacity` off screen, keeping `neededAnswers` in view from
- * the start so the opening taps don't lean on `replaceTappedTile`'s rescue
- * path — the one that hands the answer away.
- */
+/** Keeps `neededAnswers` on screen from the start, so the opening taps don't
+    lean on `replaceTappedTile`'s rescue path — the one that gives it away. */
 export function trimToCapacity(
   bank: BankWindow,
   capacity: number,
@@ -103,11 +98,8 @@ export function trimToCapacity(
     small enough it isn't half the verse. */
 export const LOOKAHEAD_BLANKS = 6
 
-/**
- * Swaps the tapped tile for an off-screen one. Only the immediate next answer
- * is a hard requirement; past it the draw is random among the lookahead, so the
- * rescued tile isn't reliably the word the user needs next.
- */
+/** Only the immediate next answer is a hard requirement; past it the draw is
+    random among the lookahead, so the new tile isn't reliably the answer. */
 export function replaceTappedTile(
   bank: BankWindow,
   tappedPosition: number,

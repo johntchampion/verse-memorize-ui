@@ -12,23 +12,15 @@ export interface SessionError {
   retry: () => void
 }
 
-/**
- * How long the finished session stays on screen before the recap replaces it.
- * Long enough for the progress rail to close (320ms) and be seen closed; the
- * recording round-trips run underneath it rather than after it.
- */
+/** Long enough for the progress rail to close (320ms) and be seen closed. */
 const WRAP_HOLD_MS = 520
 const EXIT_MS = 160
 
 /**
- * The exercise runner. Holds what's left of today's queue in local state and
- * steps through it one exercise at a time; only submitted answers round-trip to
- * the server. Answers are judged client-side against the full verse text.
- *
- * The day's plan lives on the server and each exercise says whether it has been
- * answered, so leaving part-way through and coming back resumes at the first
- * one outstanding. The recap follows the same rule: what the day moved comes
- * back from the server rather than being accumulated here.
+ * The exercise runner. Answers are judged client-side against the full verse
+ * text; only submissions round-trip. The day's plan and its recap both live on
+ * the server, so a session resumed after a quit picks up where it left off and
+ * still reports the whole day.
  */
 export function useSessionRunner(practice: boolean) {
   const [phase, setPhase] = useState<SessionPhase>('loading')
@@ -66,8 +58,7 @@ export function useSessionRunner(practice: boolean) {
         setPhase('empty')
         return
       }
-      // Every queued verse is unlocked for this user, so its full text is
-      // available — it's the answer key for both exercise types.
+      // The full text is the answer key for both exercise types.
       const ids = [...new Set(outstanding.map((e) => e.verseId))]
       const details = await Promise.all(ids.map((id) => api.verse(id)))
       const byId: Record<string, string> = {}
@@ -78,16 +69,14 @@ export function useSessionRunner(practice: boolean) {
         }
         byId[detail.verse.id] = detail.verse.text
       }
-      // A superseded call must never overwrite state a newer one already set —
-      // that is what let blankedText from one response pair with wordBank from
-      // another.
+      // A superseded call must never overwrite newer state — that is what let
+      // blankedText from one response pair with wordBank from another.
       if (loadTokenRef.current !== token) return
       setQueue(outstanding)
       setAlreadyDone(today.completedCount)
       setDayTotal(today.count)
       setDayVerses(new Set(today.exercises.map((e) => e.verseId)).size)
-      // Seeded from the server, so a session picked up again recaps everything
-      // the day moved. A drill gets nothing to seed: its recap is its own.
+      // A drill gets nothing to seed: its recap is its own.
       setEvents(today.events.map(presentEvent))
       setCorrectCount(today.correctCount)
       setTexts(byId)
@@ -113,8 +102,7 @@ export function useSessionRunner(practice: boolean) {
     setPhase('wrapping')
     try {
       const record = async () => {
-        // A drill is extra work on top of a finished day: there is no session to
-        // record and no refill for it to trigger.
+        // A drill has no session to record and no refill to trigger.
         let recorded = false
         if (!practice) {
           const result = await api.sessionComplete()
@@ -127,13 +115,12 @@ export function useSessionRunner(practice: boolean) {
         try {
           streak = (await api.me()).streak
         } catch {
-          // The session is already recorded; a failed streak fetch shouldn't
-          // block the completion screen.
+          // Already recorded — don't block the completion screen on this.
         }
         return { recorded, streak }
       }
-      // The recording and the pause run together rather than in sequence, so a
-      // fast network waits out the rail and a slow one is already covered.
+      // Together, not in sequence: a fast network waits out the rail and a
+      // slow one is already covered.
       const [result] = await Promise.all([record(), hold(WRAP_HOLD_MS)])
       setCompletion(result)
       setLeaving(true)
@@ -160,10 +147,8 @@ export function useSessionRunner(practice: boolean) {
         correct,
       )
       if (correct) setCorrectCount((n) => n + 1)
-      // Held for the recap rather than announced here: a move mid-answer is a
-      // distraction. Nothing is derived from `exercise.stage` — that was
-      // captured when the day loaded and goes stale the moment one of the
-      // verse's three daily repetitions upgrades it.
+      // Held for the recap, not announced mid-answer. Nothing is derived from
+      // `exercise.stage`: it goes stale as soon as a repetition upgrades it.
       if (outcome.events.length > 0) {
         setEvents((prev) => [...prev, ...outcome.events.map(presentEvent)])
       }

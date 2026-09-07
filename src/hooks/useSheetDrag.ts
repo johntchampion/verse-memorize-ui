@@ -45,11 +45,9 @@ interface Options {
 }
 
 /**
- * Drag-to-dismiss. The panel follows the finger 1:1, resists being pulled the
- * wrong way, and carries the velocity of a throw into the spring.
- *
- * Returns a ref that is true when a drag just happened, so the click it is
- * about to produce can be swallowed.
+ * Drag-to-dismiss: the panel follows the finger 1:1, resists the wrong way, and
+ * carries a throw's velocity into the spring. The returned ref is true when a
+ * drag just happened, so the click it produces can be swallowed.
  */
 export function useSheetDrag({
   mounted,

@@ -4,12 +4,9 @@ import { messageOf } from '../lib/errors'
 export interface ApiState<T> {
   data: T | null
   loading: boolean
-  /**
-   * The first load only — true until data has ever arrived. A refetch after a
-   * mutation leaves this false, so a screen already showing content never
-   * falls back to placeholders. This, not `loading`, is what a skeleton keys
-   * off.
-   */
+  /** True until data has ever arrived — a refetch leaves it false, so a screen
+      already showing content never falls back to placeholders. Skeletons key
+      off this, not `loading`. */
   pending: boolean
   error: string | null
   refetch: () => void
@@ -21,17 +18,13 @@ interface Settled<T> {
   error: string | null
 }
 
-/**
- * Fetch-on-mount with loading/error state. Screens re-fetch on mount;
- * `refetch` covers refreshes after mutations. `loading` is derived:
- * true until a result for the current tick has settled.
- */
+/** Fetch-on-mount; `refetch` covers refreshes after mutations. */
 export function useApi<T>(fetcher: () => Promise<T>): ApiState<T> {
   const [tick, setTick] = useState(0)
   const [settled, setSettled] = useState<Settled<T> | null>(null)
 
-  // Callers pass inline arrow functions; the latest one is kept in a ref
-  // (synced in an effect) so the fetch effect keys off `tick` alone.
+  // Callers pass inline arrow functions, so the latest goes in a ref and the
+  // fetch effect keys off `tick` alone.
   const fetcherRef = useRef(fetcher)
   useEffect(() => {
     fetcherRef.current = fetcher
@@ -75,13 +68,9 @@ export function useApi<T>(fetcher: () => Promise<T>): ApiState<T> {
 }
 
 /**
- * Merges the sources a screen needs before it can show anything. Not a hook —
- * it just reads the states it is handed, so it can be called with however many
- * a screen happens to have.
- *
- * The merged `error` is the first one reported. A screen that can survive one
- * of its sources failing should leave that source out of the error it passes on
- * and use `combineApi` only for `pending` and `refetch`.
+ * Merges the sources a screen needs before it can show anything. A screen that
+ * can survive one source failing should leave that source out of the error it
+ * passes on and use only `pending` and `refetch` from here.
  */
 export function combineApi(...states: ApiState<unknown>[]) {
   return {

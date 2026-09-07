@@ -12,13 +12,13 @@ export default function StageLadder({ stage }: { stage: Stage }) {
 
   return (
     <div
-      className="stage-pipeline"
+      className='stage-pipeline'
       aria-label={`Progression: ${STAGE_SHORT_LABELS[stage]}`}
     >
       {STAGE_SEQUENCE.map((step, i) => (
         <span key={step} style={{ display: 'contents' }}>
           {i > 0 && (
-            <span className="stage-arrow" aria-hidden="true">
+            <span className='stage-arrow' aria-hidden='true'>
               {/* The slotted tiers end at index 2; past it the verse is memorized. */}
               {i === 3 ? '|' : '›'}
             </span>

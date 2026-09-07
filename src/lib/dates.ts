@@ -12,9 +12,9 @@ export function todayInTimezone(timezone: string, now = new Date()): string {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(now);
+    }).format(now)
   } catch {
     // Unknown timezone on the profile — fall back to UTC, same as the server.
-    return now.toISOString().slice(0, 10);
+    return now.toISOString().slice(0, 10)
   }
 }

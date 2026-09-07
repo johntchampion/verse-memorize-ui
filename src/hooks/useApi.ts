@@ -1,24 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { messageOf } from '../lib/errors';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { messageOf } from '../lib/errors'
 
 export interface ApiState<T> {
-  data: T | null;
-  loading: boolean;
+  data: T | null
+  loading: boolean
   /**
    * The first load only — true until data has ever arrived. A refetch after a
    * mutation leaves this false, so a screen already showing content never
    * falls back to placeholders. This, not `loading`, is what a skeleton keys
    * off.
    */
-  pending: boolean;
-  error: string | null;
-  refetch: () => void;
+  pending: boolean
+  error: string | null
+  refetch: () => void
 }
 
 interface Settled<T> {
-  tick: number;
-  data: T | null;
-  error: string | null;
+  tick: number
+  data: T | null
+  error: string | null
 }
 
 /**
@@ -27,23 +27,23 @@ interface Settled<T> {
  * true until a result for the current tick has settled.
  */
 export function useApi<T>(fetcher: () => Promise<T>): ApiState<T> {
-  const [tick, setTick] = useState(0);
-  const [settled, setSettled] = useState<Settled<T> | null>(null);
+  const [tick, setTick] = useState(0)
+  const [settled, setSettled] = useState<Settled<T> | null>(null)
 
   // Callers pass inline arrow functions; the latest one is kept in a ref
   // (synced in an effect) so the fetch effect keys off `tick` alone.
-  const fetcherRef = useRef(fetcher);
+  const fetcherRef = useRef(fetcher)
   useEffect(() => {
-    fetcherRef.current = fetcher;
-  });
+    fetcherRef.current = fetcher
+  })
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
 
     fetcherRef
       .current()
       .then((data) => {
-        if (!cancelled) setSettled({ tick, data, error: null });
+        if (!cancelled) setSettled({ tick, data, error: null })
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -51,19 +51,19 @@ export function useApi<T>(fetcher: () => Promise<T>): ApiState<T> {
             tick,
             data: null,
             error: messageOf(err, 'Something went wrong'),
-          });
+          })
         }
-      });
+      })
 
     return () => {
-      cancelled = true;
-    };
-  }, [tick]);
+      cancelled = true
+    }
+  }, [tick])
 
-  const refetch = useCallback(() => setTick((t) => t + 1), []);
+  const refetch = useCallback(() => setTick((t) => t + 1), [])
 
-  const loading = settled === null || settled.tick !== tick;
-  const data = settled?.data ?? null;
+  const loading = settled === null || settled.tick !== tick
+  const data = settled?.data ?? null
 
   return {
     data,
@@ -71,7 +71,7 @@ export function useApi<T>(fetcher: () => Promise<T>): ApiState<T> {
     pending: loading && data === null,
     error: loading ? null : (settled?.error ?? null),
     refetch,
-  };
+  }
 }
 
 /**
@@ -88,7 +88,7 @@ export function combineApi(...states: ApiState<unknown>[]) {
     pending: states.some((s) => s.pending),
     error: states.find((s) => s.error !== null)?.error ?? null,
     refetch: () => {
-      for (const state of states) state.refetch();
+      for (const state of states) state.refetch()
     },
-  };
+  }
 }

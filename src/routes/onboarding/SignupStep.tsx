@@ -1,10 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/auth'
+import { EMAIL_RE } from '../../lib/email'
 import { messageOf } from '../../lib/errors'
 import { timezoneOptions } from '../../lib/timezones'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** Signup with the progress the taster earned. */
 export default function SignupStep({ onSignIn }: { onSignIn: () => void }) {

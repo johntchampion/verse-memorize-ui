@@ -271,6 +271,13 @@ a:hover {
     cursor: default;
 }
 
+/* The password-reset screens use a link as their primary action ("Back to sign
+   in", "Send a new link"). Without this, the global a:hover wins on specificity
+   and repaints the label coral — onto its own coral background. */
+a.btn:hover {
+    color: var(--on-accent);
+}
+
 .btn-spinner {
     display: inline-block;
     width: 16px;

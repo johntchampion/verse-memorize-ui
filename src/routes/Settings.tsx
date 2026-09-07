@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import Screen, { BackLink } from '../components/Screen'
 import AccountCard from '../components/settings/AccountCard'
 import DeleteAccountAlert from '../components/settings/DeleteAccountAlert'
+import PasswordCard from '../components/settings/PasswordCard'
 import PreferenceCard from '../components/settings/PreferenceCard'
 import ToggleCard from '../components/settings/ToggleCard'
 import { useAuth } from '../context/auth'
@@ -118,6 +119,8 @@ export default function Settings() {
           </button>
         )}
       </ToggleCard>
+
+      <PasswordCard />
 
       <button
         className='btn-ghost'

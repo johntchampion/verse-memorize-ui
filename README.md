@@ -65,17 +65,34 @@ src/
   lib/exercise.ts      exercise parsing, answer derivation, progression labels
   lib/path.ts          today's session read as a path of stops, for the Today tab
   lib/dates.ts         user-timezone day boundaries (mirrors the API's)
-  routes/              one file per screen: Onboarding, Login, Signup, Today,
-                       Practicing, AllVerses, Session, VerseDetail, Settings
+  routes/              one file per screen: Onboarding, Login, Signup,
+                       ForgotPassword, ResetPassword, Today, Practicing,
+                       AllVerses, Session, VerseDetail, Settings
   components/          TileExercise, TypedExercise, SlotRow, StageLadder,
-                       TabBar, ProgressBar, TranslationTag, settings/ToggleCard
+                       TabBar, ProgressBar, TranslationTag, settings/ToggleCard,
+                       settings/PasswordCard
   index.css            the whole design system (tokens + component classes)
 ```
 
-Routes: `/login`, `/signup` are public; `/`, `/session`, `/verses`,
-`/verses/:id`, `/settings` are guarded (`RequireAuth` in `App.tsx`). The JWT is
-kept in `localStorage` so a home-screen relaunch stays signed in; an expired
-token or any 401 clears it and redirects to `/login`.
+Routes: `/login`, `/signup`, `/forgot-password` are public; `/`, `/session`,
+`/verses`, `/verses/:id`, `/settings` are guarded (`RequireAuth` in `App.tsx`).
+The JWT is kept in `localStorage` so a home-screen relaunch stays signed in; an
+expired token or any 401 clears it and redirects to `/login`.
+
+`/reset-password` is the exception: it carries no guard at all, not even the
+`RedirectIfAuthed` the other public routes use. The link arrives by email and is
+often opened in a browser that is still signed in — on the very device whose
+session the reset is about to end — and redirecting an authenticated visitor to
+Today would make that link unusable exactly where it is most likely to be
+clicked. It reads its token from the query string once and immediately replaces
+the URL, so a spent token is not left in history or in a referrer.
+
+A revoked session is not the same as an expired one: `tokenIsExpired` reads only
+the `exp` claim, so a token killed by someone else's password reset still looks
+valid until a request comes back 401. `AuthProvider` records that as `signedOut`
+and `RequireAuth` sends those users to `/login` rather than to its usual
+fallback — without it, the root's `/welcome` fallback would drop a returning
+user into onboarding.
 
 ## Translations
 

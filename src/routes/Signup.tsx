@@ -3,9 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import Alert from '../components/Alert'
 import { useAuth } from '../context/auth'
 import AppIcon from '../components/AppIcon'
+import { EMAIL_RE } from '../lib/email'
 import { messageOf } from '../lib/errors'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function Signup() {
   const { signup } = useAuth()
@@ -76,6 +75,9 @@ export default function Signup() {
       </form>
       <p className='small muted' style={{ fontWeight: 700, marginTop: 20 }}>
         Already practicing? <Link to='/login'>Sign in</Link>
+      </p>
+      <p className='small muted' style={{ fontWeight: 700, marginTop: 10 }}>
+        <Link to='/forgot-password'>Forgotten your password?</Link>
       </p>
       <Alert
         open={error !== null}

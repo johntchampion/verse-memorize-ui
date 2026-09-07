@@ -288,3 +288,11 @@ export interface PushTestResponse {
 export interface DeleteAccountResponse {
   deleted: true
 }
+
+// POST /auth/forgot-password, POST /api/me/request-password-reset.
+// `requested` says the link was accepted for sending, not that it was sent —
+// the API does not wait for the mail, and answers the same for an address with
+// no account. POST /auth/reset-password returns an AuthResponse instead.
+export interface PasswordResetRequested {
+  requested: true
+}

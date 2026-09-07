@@ -22,10 +22,17 @@ function initialSession(): { token: string | null; userId: string | null } {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState(initialSession)
+  const [signedOut, setSignedOut] = useState(false)
 
   // Any 401 from the API clears the session; the route guard then redirects.
+  // The flag is what sends it to sign-in rather than onboarding: a password
+  // reset elsewhere revokes this token without touching its `exp`, so the guard
+  // can't tell a dead session from a first visit on its own.
   useEffect(() => {
-    setUnauthorizedHandler(() => setSession({ token: null, userId: null }))
+    setUnauthorizedHandler(() => {
+      setSession({ token: null, userId: null })
+      setSignedOut(true)
+    })
     return () => setUnauthorizedHandler(null)
   }, [])
 
@@ -33,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.login(email, password)
     storeSession(res.token, res.userId)
     setSession({ token: res.token, userId: res.userId })
+    setSignedOut(false)
   }, [])
 
   const signup = useCallback(async (email: string, password: string, timezone?: string) => {
@@ -42,15 +50,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.signup(email, password, tz)
     storeSession(res.token, res.userId)
     setSession({ token: res.token, userId: res.userId })
+    setSignedOut(false)
+  }, [])
+
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    // Cleared first: request() attaches the stored bearer token to every call,
+    // and a link belonging to a different account would otherwise go out under
+    // this browser's session.
+    clearSession()
+    setSession({ token: null, userId: null })
+
+    const res = await api.resetPassword(token, password)
+    storeSession(res.token, res.userId)
+    setSession({ token: res.token, userId: res.userId })
+    setSignedOut(false)
   }, [])
 
   const logout = useCallback(() => {
     clearSession()
     setSession({ token: null, userId: null })
+    setSignedOut(true)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ ...session, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{ ...session, signedOut, login, signup, resetPassword, logout }}
+    >
       {children}
     </AuthContext.Provider>
   )

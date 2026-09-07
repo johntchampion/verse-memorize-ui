@@ -4,6 +4,7 @@ import type {
   DeleteAccountResponse,
   ExerciseType,
   MeResponse,
+  PasswordResetRequested,
   PushKeyResponse,
   PushTestResponse,
   QueueResponse,
@@ -98,6 +99,11 @@ async function request<T>(
 
   // Both a 401 and "user not found" leave the client with a dead session.
   // delete-account is excluded: its 401 is a wrong password, not a dead token.
+  //
+  // The reset routes need no entry of their own and must not get one: both live
+  // under /auth and are already excluded, which is right (a stale reset link
+  // must not sign out an unrelated session), while a 401 from
+  // /api/me/request-password-reset really is a dead session and should land here.
   if (
     !path.startsWith('/auth') &&
     path !== '/api/me/delete-account' &&
@@ -136,6 +142,28 @@ export const api = {
     translation?: string
     remindersEnabled?: boolean
   }) => request<MeResponse>('/api/me', { method: 'PATCH', body: patch }),
+
+  /** Answers the same whether or not the address has an account, so nothing
+      here can be used to find out which addresses are registered. */
+  forgotPassword: (email: string) =>
+    request<PasswordResetRequested>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    }),
+
+  /** Returns a fresh session: the reset expires every other one, including any
+      this browser was holding. */
+  resetPassword: (token: string, password: string) =>
+    request<AuthResponse>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
+    }),
+
+  /** The signed-in half — no address, because the API uses the one on file. */
+  requestPasswordReset: () =>
+    request<PasswordResetRequested>('/api/me/request-password-reset', {
+      method: 'POST',
+    }),
 
   deleteAccount: (password: string) =>
     request<DeleteAccountResponse>('/api/me/delete-account', {

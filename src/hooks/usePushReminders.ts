@@ -49,7 +49,10 @@ const BLOCKED_HINT =
 
 /** On iOS the APIs are absent in a tab and present once installed, so the
     capability check alone can't tell "never" from "not yet". */
-function platformBlocker(): Exclude<PushState, 'off' | 'on' | 'blocked'> | null {
+function platformBlocker(): Exclude<
+  PushState,
+  'off' | 'on' | 'blocked'
+> | null {
   if (!pushSupported()) {
     return isIos() && !isStandalone() ? 'needs-install' : 'unsupported'
   }
@@ -64,14 +67,19 @@ export function usePushReminders(
   remindersEnabled: boolean | undefined,
   onSaved: () => void,
 ): PushReminders {
-  const [blocker, setBlocker] = useState<
-    Exclude<PushState, 'off' | 'on'> | null
-  >(platformBlocker)
+  const [blocker, setBlocker] = useState<Exclude<
+    PushState,
+    'off' | 'on'
+  > | null>(platformBlocker)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<boolean | null>(null)
 
   const enabled = pending ?? remindersEnabled ?? false
+
+  useEffect(() => {
+    if (pending !== null && remindersEnabled === pending) setPending(null)
+  }, [pending, remindersEnabled])
 
   // The "enabled it on my phone, now I'm on my laptop" case: the preference is
   // per account but a subscription is per browser.
@@ -108,7 +116,6 @@ export function usePushReminders(
           } else {
             await disablePush()
           }
-          setPending(null)
           onSaved()
         } catch (err) {
           if (err instanceof PermissionRefused) {

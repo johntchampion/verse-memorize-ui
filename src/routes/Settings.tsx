@@ -1,23 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, api } from '../api/client'
-import Alert from '../components/Alert'
+import { api } from '../api/client'
 import Screen, { BackLink } from '../components/Screen'
 import AccountCard from '../components/settings/AccountCard'
+import DeleteAccountAlert from '../components/settings/DeleteAccountAlert'
 import PreferenceCard from '../components/settings/PreferenceCard'
 import ToggleCard from '../components/settings/ToggleCard'
 import { useAuth } from '../context/auth'
 import { useApi } from '../hooks/useApi'
 import { usePreference } from '../hooks/usePreference'
 import { usePushReminders } from '../hooks/usePushReminders'
-
-function timezoneOptions(current: string): string[] {
-  const zones =
-    typeof Intl.supportedValuesOf === 'function'
-      ? Intl.supportedValuesOf('timeZone')
-      : []
-  return zones.includes(current) ? zones : [current, ...zones]
-}
+import { timezoneOptions } from '../lib/timezones'
 
 export default function Settings() {
   const { logout } = useAuth()
@@ -48,45 +41,16 @@ export default function Settings() {
 
   const reminders = usePushReminders(me.data?.user.remindersEnabled, me.refetch)
 
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
   function signOut() {
     logout()
     navigate('/login', { replace: true })
   }
 
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deletePassword, setDeletePassword] = useState('')
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
-
-  function openDeleteAccount() {
-    setDeletePassword('')
-    setDeleteError(null)
-    setDeleteOpen(true)
-  }
-
-  function closeDeleteAccount() {
-    if (deleting) return
-    setDeleteOpen(false)
-  }
-
-  async function deleteAccount() {
-    if (deleting) return
-    if (!deletePassword) {
-      setDeleteError('Enter your password to confirm.')
-      return
-    }
-    setDeleting(true)
-    setDeleteError(null)
-    try {
-      await api.deleteAccount(deletePassword)
-      logout()
-      navigate('/signup', { replace: true })
-    } catch (err) {
-      setDeleting(false)
-      setDeleteError(
-        err instanceof ApiError ? err.message : 'Something went wrong.',
-      )
-    }
+  function afterDelete() {
+    logout()
+    navigate('/signup', { replace: true })
   }
 
   return (
@@ -165,51 +129,16 @@ export default function Settings() {
 
       <button
         className='btn-ghost'
-        onClick={openDeleteAccount}
+        onClick={() => setDeleteOpen(true)}
         style={{ color: 'var(--coral-text)' }}
       >
         Delete account
       </button>
 
-      <Alert
+      <DeleteAccountAlert
         open={deleteOpen}
-        title='Delete account?'
-        message={
-          <>
-            This permanently erases your account, verses, and progress — it
-            can't be undone.
-            <span className='field' style={{ marginTop: 16 }}>
-              <input
-                id='delete-password'
-                type='password'
-                autoComplete='current-password'
-                placeholder='Your password'
-                value={deletePassword}
-                disabled={deleting}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void deleteAccount()
-                }}
-              />
-            </span>
-            {deleteError && (
-              <span
-                className='error-text'
-                role='alert'
-                style={{ marginTop: 8, display: 'block' }}
-              >
-                {deleteError}
-              </span>
-            )}
-          </>
-        }
-        tone='danger'
-        primaryLabel={deleting ? 'Deleting…' : 'Delete account'}
-        onPrimary={() => void deleteAccount()}
-        secondaryLabel='Cancel'
-        onSecondary={closeDeleteAccount}
-        onClose={closeDeleteAccount}
-        dismissible={!deleting}
+        onClose={() => setDeleteOpen(false)}
+        onDeleted={afterDelete}
       />
     </Screen>
   )

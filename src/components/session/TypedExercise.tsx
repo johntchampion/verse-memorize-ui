@@ -5,6 +5,11 @@ import { normalizeTypedText, usesReferencePhase } from '../../lib/exercise'
 import { referencesMatch } from '../../lib/reference'
 import { StageChip } from './ExerciseChips'
 import NextButton from './NextButton'
+import TypedResult, {
+  type ReferenceOutcome,
+  type TypedOutcome,
+} from './TypedResult'
+import ReferencePrompt from './ReferencePrompt'
 
 interface Props {
   exercise: SessionExercise
@@ -14,9 +19,6 @@ interface Props {
   pending: boolean
   onComplete: (correct: boolean) => void
 }
-
-type Result = 'correct' | 'incorrect' | 'shown' | null
-type RefResult = 'correct' | 'incorrect' | null
 
 /** The reference line with nothing in it, so the question can be asked. */
 function HiddenReference() {
@@ -33,17 +35,13 @@ function HiddenReference() {
 }
 
 /**
- * Typed exercise: full recall into one free-text input, validated only on
- * "Check". Case, punctuation and spacing are forgiven; the words must all be
- * there, in order. "Show the verse" trades the attempt for a re-read —
- * recorded as a miss, but gentler than guessing blind.
+ * Typed exercise: full recall into one free-text input, validated on "Check".
+ * Case, punctuation and spacing are forgiven; the words must all be there, in
+ * order. "Show the verse" trades the attempt for a re-read.
  *
- * Checking then asks for the reference. Here it was the *prompt* — the only
- * cue saying which verse to write — so this tests whether the pairing stuck
- * rather than blind recall, and hiding it the moment Check is pressed is what
- * makes it a question at all. It is asked even after a wrong or shown verse:
- * the drill's value doesn't depend on the text being right, and branching
- * would double the state machine.
+ * Checking then asks for the reference, which was the *prompt* here — hiding it
+ * the moment Check is pressed is what makes it a question. It is asked even
+ * after a wrong or shown verse: branching would double the state machine.
  */
 export default function TypedExercise({
   exercise,
@@ -54,9 +52,8 @@ export default function TypedExercise({
   onComplete,
 }: Props) {
   const [value, setValue] = useState('')
-  const [result, setResult] = useState<Result>(null)
-  const [refValue, setRefValue] = useState('')
-  const [refResult, setRefResult] = useState<RefResult>(null)
+  const [result, setResult] = useState<TypedOutcome | null>(null)
+  const [refResult, setRefResult] = useState<ReferenceOutcome>(null)
 
   // Stage alone — unlike the tile path this needs no decomposition, since
   // `referencesMatch` falls back to a string compare for anything odd.
@@ -73,20 +70,11 @@ export default function TypedExercise({
     )
   }
 
-  function checkReference() {
+  function checkReference(typed: string) {
     setRefResult(
-      referencesMatch(refValue, exercise.reference) ? 'correct' : 'incorrect',
+      referencesMatch(typed, exercise.reference) ? 'correct' : 'incorrect',
     )
   }
-
-  const headline =
-    result === 'correct'
-      ? refResult === 'incorrect'
-        ? 'Word for word — but that reference isn’t it.'
-        : 'Word for word. Kept it.'
-      : result === 'shown'
-        ? 'Shown — read it through. It comes back around.'
-        : 'Not quite. Read it again:'
 
   return (
     <div className='stack'>
@@ -142,61 +130,17 @@ export default function TypedExercise({
         </button>
       )}
 
-      {askingReference && (
-        <div className='stack'>
-          <p className='small muted' style={{ fontWeight: 600 }}>
-            Where is it? Book, chapter and verse.
-          </p>
-          <input
-            type='text'
-            className='ref-input'
-            value={refValue}
-            onChange={(e) => setRefValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && refValue.trim().length > 0) {
-                checkReference()
-              }
-            }}
-            placeholder='Book chapter:verse'
-            autoCapitalize='words'
-            autoCorrect='off'
-            spellCheck={false}
-            enterKeyHint='done'
-            aria-label='Type the reference'
-          />
-          <button
-            type='button'
-            className='btn'
-            onClick={checkReference}
-            disabled={refValue.trim().length === 0}
-          >
-            Check reference
-          </button>
-        </div>
-      )}
+      {askingReference && <ReferencePrompt onCheck={checkReference} />}
 
-      {judged && (
+      {judged && result !== null && (
         <>
-          <div
-            className={`result-card ${passed ? 'result-correct' : 'result-incorrect'}`}
-            role='status'
-          >
-            <p className='result-headline'>
-              <span aria-hidden='true'>
-                {result === 'correct' ? '✓' : result === 'shown' ? '👀' : '↺'}
-              </span>
-              {headline}
-            </p>
-            <p className='result-verse'>{fullText}</p>
-            {refResult !== null && (
-              <p className='result-reference'>
-                <span aria-hidden='true'>
-                  {refResult === 'correct' ? '✓' : '✗'}
-                </span>
-                {exercise.reference}
-              </p>
-            )}
-          </div>
+          <TypedResult
+            result={result}
+            refResult={refResult}
+            fullText={fullText}
+            reference={exercise.reference}
+            passed={passed}
+          />
           <NextButton
             isLast={isLast}
             pending={pending}

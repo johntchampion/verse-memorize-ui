@@ -52,7 +52,7 @@
     --on-accent: #ffffff;
 
     /* The chunky pressed lip under a word-bank tile, and the lift under the
-     sticky dock and the toast. */
+     sticky dock. */
     --tile-shadow: #ede0cd;
     --tile-used-text: #c9bca9;
     --lift: rgba(43, 37, 33, 0.25);
@@ -914,35 +914,49 @@ a:hover {
     flex: none;
 }
 
-/* --- Toast --------------------------------------------------------------- */
-
-.toast {
-    position: fixed;
-    top: calc(env(safe-area-inset-top) + 16px);
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: min(90vw, 440px);
-    padding: 10px 18px;
-    border-radius: 999px;
-    background: var(--ink);
-    color: var(--cream);
-    font-size: 0.9rem;
-    font-weight: 700;
-    box-shadow: 0 4px 16px var(--lift);
-    animation: toast-in 240ms ease;
-    z-index: 10;
+/*
+ * The last answer of a session doesn't clear the screen. Everything below the
+ * header recedes while the rail closes over it, so the recap arrives as the
+ * end of something rather than after a blank gap.
+ *
+ * Opacity only, deliberately: a transform here would make the exercise a
+ * containing block for its own sticky word-bank dock (see the note on
+ * .nav-transit below), and the dock would jump as the fade began.
+ */
+.session-wrapping>:not(header):not(.wrap-note) {
+    opacity: 0.32;
+    transition: opacity 260ms ease;
+    pointer-events: none;
 }
 
-@keyframes toast-in {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -8px);
-    }
+.session-leaving {
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
 
-    to {
-        opacity: 1;
-        transform: translate(-50%, 0);
-    }
+/*
+ * Only ever seen when recording the session outlasts the pause it happens
+ * behind — the delay outlives the hold, so a fast network never shows it.
+ *
+ * Fixed and centred rather than in flow: the exercise it appears over fills the
+ * screen and would push it under the fold. It is also the one thing here the
+ * dim doesn't touch, since it's the only part still saying anything.
+ */
+.wrap-note {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 50%;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--cream);
+    border: 1.5px solid var(--line);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--soft);
+    animation: rise-in 200ms ease 600ms both;
 }
 
 /* --- Bottom tab bar (Today / Practicing / All) ---------------------------- */
@@ -1746,22 +1760,139 @@ a:hover {
     padding: calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + var(--screen-bottom-gap));
 }
 
+/*
+ * The ring is the payoff, so it arrives rather than appears: an unfilled track
+ * on the element itself, and a conic gradient masked down to a ring on top of
+ * it that sweeps from twelve o'clock all the way round. The inset shadow keeps
+ * the 120px outer diameter a border would have given it.
+ *
+ * --sweep has to be registered for a browser to interpolate it as an angle
+ * rather than swapping one string for another. Where it isn't, the gradient
+ * jumps straight to closed — which is the ring's resting state anyway.
+ */
+@property --sweep {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes ring-sweep {
+    from {
+        --sweep: 0deg;
+    }
+
+    to {
+        --sweep: 360deg;
+    }
+}
+
 .complete-circle {
+    position: relative;
     width: 120px;
     height: 120px;
     border-radius: 50%;
     background: var(--card);
-    border: 5px solid var(--amber);
+    box-shadow: inset 0 0 0 5px var(--amber-line);
     display: grid;
     place-items: center;
 }
 
+.complete-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--amber) var(--sweep), transparent 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+    animation: ring-sweep 560ms cubic-bezier(0.22, 0.61, 0.36, 1) 120ms both;
+}
+
+/*
+ * No delay of its own: the circle above is still holding it out of sight when
+ * the screen opens, so this pops in the moment there is anything to see.
+ */
 .complete-circle-count {
     font-family: var(--serif);
     font-size: 3.25rem;
     font-weight: 700;
     color: var(--amber-deep);
     line-height: 1;
+    animation: pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/*
+ * The count turning over, when the session is what moved it. Both numbers are
+ * in the same grid cell from the start and neither is ever swapped out; the
+ * old one leaves upward as the new one arrives from below, which is the way a
+ * number that went up should move, and means there is never a frame with an
+ * empty ring between them.
+ *
+ * The delay is where the ring finishes closing (its own 120ms + 560ms), so the
+ * two land together — the turn-over reads as the ring arriving rather than as
+ * a second event after it. The arriving number gets the overshoot; the leaving
+ * one doesn't, since nothing it does after it fades is worth easing.
+ */
+.complete-roll {
+    display: grid;
+    /*
+     * Clipped, so the two numbers are never superimposed: one is behind an
+     * edge while the other is in the ring, the way a counter wheel shows one
+     * digit at a time. The padding is headroom for the glyphs — nothing is
+     * shaved at rest, and the arriving number's overshoot has somewhere to go
+     * — and the matching negative margin keeps the box the size it would have
+     * been without it.
+     */
+    overflow: hidden;
+    padding: 0.1em;
+    margin: -0.1em;
+}
+
+.complete-roll>span {
+    grid-area: 1 / 1;
+}
+
+/*
+ * The same duration, delay and easing on both, because they are two marks on
+ * one wheel: they have to keep a constant distance or the illusion goes and
+ * you get two numbers drifting past each other instead. That distance is a
+ * little more than the clipped box is tall, so exactly one of them is ever in
+ * view — no fade needed, and none used.
+ */
+.complete-roll-out,
+.complete-roll-in {
+    animation-duration: 460ms;
+    animation-delay: 680ms;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation-fill-mode: both;
+}
+
+.complete-roll-out {
+    animation-name: roll-out;
+}
+
+.complete-roll-in {
+    animation-name: roll-in;
+}
+
+@keyframes roll-out {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-126%);
+    }
+}
+
+@keyframes roll-in {
+    from {
+        transform: translateY(126%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
 }
 
 .complete-eyebrow {
@@ -1832,6 +1963,30 @@ a:hover {
 .complete-event-detail {
     font-size: 0.8rem;
     font-weight: 700;
+}
+
+/*
+ * The recap assembles top-down instead of landing whole. Each block carries its
+ * own --enter delay from the markup, since the order follows the content (how
+ * many verses moved) rather than anything the stylesheet can count.
+ *
+ * `both` is load-bearing: without it a block sits at full opacity through its
+ * own delay and the stagger never reads.
+ */
+@keyframes rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.complete-rise {
+    animation: rise-in 420ms cubic-bezier(0.22, 0.61, 0.36, 1) var(--enter, 0ms) both;
 }
 
 /* --- Forms ---------------------------------------------------------------- */
@@ -2705,7 +2860,7 @@ a:hover {
  * scrolls exactly as it would without them. That is load-bearing, not tidiness.
  * A transform on any of them — or even a bare `will-change: transform` — makes
  * it the containing block for every `position: fixed` descendant, which here is
- * the tab bar and the toast. So all the positioning below is scoped to
+ * the tab bar. So all the positioning below is scoped to
  * `.nav-transit`, added when the spring starts and torn off when it lands.
  *
  * During the transition each layer *does* become that containing block, which
@@ -2773,5 +2928,31 @@ a:hover {
     .sk {
         animation: none !important;
         opacity: 0.7;
+    }
+
+    /* It doesn't shorten the *delay* either, and the recap's entrance is built
+       out of delays. Left alone, every block would still wait its turn and
+       appear out of nothing — a stagger with the motion removed is still a
+       stagger. The whole screen arrives at once instead.
+       (.wrap-note keeps its delay on purpose: that one is a debounce on a
+       loading message, not an entrance.) */
+    .complete-rise {
+        animation: none;
+    }
+
+    .complete-circle::before {
+        animation: none;
+        --sweep: 360deg;
+    }
+
+    /* The roll is two halves of one movement. With the movement gone, only the
+       number it turns into should be in the ring — the other would otherwise
+       sit right on top of it. */
+    .complete-roll-out {
+        display: none;
+    }
+
+    .complete-roll-in {
+        animation: none;
     }
 }

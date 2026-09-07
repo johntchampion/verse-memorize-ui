@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { SessionExercise } from '../api/types'
@@ -8,20 +8,24 @@ import SessionHeader from '../components/session/SessionHeader'
 import SessionSkeleton from '../components/session/SessionSkeleton'
 import TileExercise from '../components/session/TileExercise'
 import TypedExercise from '../components/session/TypedExercise'
-import {
-  eventToast,
-  presentEvent,
-  type SessionEvent,
-} from '../lib/sessionEvents'
+import { hold } from '../lib/motion'
+import { presentEvent, type SessionEvent } from '../lib/sessionEvents'
 
-type Phase = 'loading' | 'empty' | 'running' | 'finishing' | 'done'
+type Phase = 'loading' | 'empty' | 'running' | 'wrapping' | 'done'
 
 interface ErrorState {
   message: string
   retry: () => void
 }
 
-const TOAST_MS = 2500
+/**
+ * How long the finished session stays on screen before the recap replaces it.
+ * Long enough for the progress rail to close (320ms) and be seen closed, and
+ * the recording round-trips run underneath it rather than after it — the pause
+ * is what the wait was already costing, spent on something to look at.
+ */
+const WRAP_HOLD_MS = 520
+const EXIT_MS = 160
 
 /**
  * The exercise runner. Holds what's left of today's queue in local state and
@@ -54,7 +58,6 @@ export default function Session() {
   const [translation, setTranslation] = useState('')
   const [index, setIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<ErrorState | null>(null)
   const [events, setEvents] = useState<SessionEvent[]>([])
   const [correctCount, setCorrectCount] = useState(0)
@@ -62,14 +65,20 @@ export default function Session() {
     recorded: boolean
     streak: number | null
   } | null>(null)
+  /** The last beat of the hold: the session fades before the recap arrives. */
+  const [leaving, setLeaving] = useState(false)
+
+  const loadTokenRef = useRef(0)
 
   const load = useCallback(async () => {
+    const token = ++loadTokenRef.current
     setError(null)
     setPhase('loading')
     try {
       const today = await api.sessionToday(practice)
       const outstanding = today.exercises.filter((e) => !e.completed)
       if (outstanding.length === 0) {
+        if (loadTokenRef.current !== token) return
         setPhase('empty')
         return
       }
@@ -85,6 +94,11 @@ export default function Session() {
         }
         byId[detail.verse.id] = detail.verse.text
       }
+      // A superseded call (e.g. React StrictMode's double-invoke in dev, or a
+      // practice drill re-requested before the first reply lands) must never
+      // overwrite state a newer call already set — that's what let blankedText
+      // from one response pair with wordBank from another.
+      if (loadTokenRef.current !== token) return
       setQueue(outstanding)
       setAlreadyDone(today.completedCount)
       setDayTotal(today.count)
@@ -99,6 +113,7 @@ export default function Session() {
       setIndex(0)
       setPhase('running')
     } catch (err) {
+      if (loadTokenRef.current !== token) return
       setError({
         message:
           err instanceof Error
@@ -113,36 +128,40 @@ export default function Session() {
     void load()
   }, [load])
 
-  useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(() => setToast(null), TOAST_MS)
-    return () => clearTimeout(timer)
-  }, [toast])
-
   const finish = useCallback(async () => {
     setError(null)
-    setPhase('finishing')
+    setLeaving(false)
+    setPhase('wrapping')
     try {
-      // A drill is extra work on top of a finished day: there is no session to
-      // record and no refill for it to trigger.
-      let recorded = false
-      if (!practice) {
-        const result = await api.sessionComplete()
-        recorded = result.recorded
-        if (result.events.length > 0) {
-          setEvents((prev) => [...prev, ...result.events.map(presentEvent)])
+      const record = async () => {
+        // A drill is extra work on top of a finished day: there is no session
+        // to record and no refill for it to trigger.
+        let recorded = false
+        if (!practice) {
+          const result = await api.sessionComplete()
+          recorded = result.recorded
+          if (result.events.length > 0) {
+            setEvents((prev) => [...prev, ...result.events.map(presentEvent)])
+          }
         }
+        let streak: number | null = null
+        try {
+          streak = (await api.me()).streak
+        } catch {
+          // The session is already recorded; a failed streak fetch shouldn't
+          // block the completion screen.
+        }
+        return { recorded, streak }
       }
-      let streak: number | null = null
-      try {
-        streak = (await api.me()).streak
-      } catch {
-        // The session is already recorded; a failed streak fetch shouldn't
-        // block the completion screen.
-      }
-      setCompletion({ recorded, streak })
+      // The recording and the pause run together rather than in sequence, so a
+      // fast network waits out the rail and a slow one is already covered.
+      const [result] = await Promise.all([record(), hold(WRAP_HOLD_MS)])
+      setCompletion(result)
+      setLeaving(true)
+      await hold(EXIT_MS)
       setPhase('done')
     } catch (err) {
+      setLeaving(false)
       setError({
         message:
           err instanceof Error ? err.message : 'Could not record the session.',
@@ -164,11 +183,12 @@ export default function Session() {
       )
       if (correct) setCorrectCount((n) => n + 1)
       // What this attempt moved, as the server recorded it — including any
-      // slot its outcome refilled. Nothing is derived from `exercise.stage`
-      // here: that was captured when the day loaded, and a verse is drilled
-      // three times a day, so it goes stale the moment one of them upgrades.
-      const message = outcome.events.map(eventToast).find((line) => line)
-      if (message) setToast(message)
+      // slot its outcome refilled. Held for the recap rather than announced
+      // here: a move mid-answer is a distraction, and the end of the session
+      // is where the day's moves are read together. Nothing is derived from
+      // `exercise.stage`: that was captured when the day loaded, and a verse
+      // is drilled three times a day, so it goes stale the moment one of them
+      // upgrades.
       if (outcome.events.length > 0) {
         setEvents((prev) => [...prev, ...outcome.events.map(presentEvent)])
       }
@@ -216,21 +236,6 @@ export default function Session() {
     )
   }
 
-  // Not a load of content but a submit after it: there is nothing left on
-  // screen to hold a placeholder's shape.
-  if (phase === 'finishing') {
-    return (
-      <>
-        <main className='shell'>
-          <p className='muted' role='status'>
-            Wrapping up…
-          </p>
-        </main>
-        {errorAlert}
-      </>
-    )
-  }
-
   if (phase === 'empty') {
     return (
       <main className='shell stack'>
@@ -267,16 +272,25 @@ export default function Session() {
   const exercise = queue[index]
   const fullText = texts[exercise.verseId]
   const isLast = index === queue.length - 1
+  const wrapping = phase === 'wrapping'
+
+  // The last answer doesn't clear the screen: the session holds its shape and
+  // recedes while the rail closes over it, so the recap arrives as the end of
+  // something rather than after a gap.
+  const shellClass = [
+    'shell stack shell-full',
+    wrapping ? 'session-wrapping' : '',
+    leaving ? 'session-leaving' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <main className='shell stack shell-full'>
-      {toast && (
-        <div className='toast' role='status'>
-          {toast}
-        </div>
-      )}
-
-      <SessionHeader done={alreadyDone + index} total={dayTotal} />
+    <main className={shellClass}>
+      <SessionHeader
+        done={alreadyDone + index + (wrapping ? 1 : 0)}
+        total={dayTotal}
+      />
 
       {exercise.exerciseType === 'tile_fill_blank' ? (
         <TileExercise
@@ -298,6 +312,14 @@ export default function Session() {
           pending={submitting}
           onComplete={(correct) => void submit(correct)}
         />
+      )}
+
+      {/* Only ever seen when the recording outlasts the hold: its delay is
+          longer than the pause it would otherwise interrupt. */}
+      {wrapping && (
+        <p className='wrap-note' role='status'>
+          Wrapping up…
+        </p>
       )}
       {errorAlert}
     </main>

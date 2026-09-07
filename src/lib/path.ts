@@ -3,13 +3,8 @@ import { BLANK, STAGE_SHORT_LABELS } from './exercise'
 
 /**
  * Today's session, read as a path: one stop per exercise, in the order the
- * runner will take them.
- *
- * The order and the done/not-done of every stop are the server's — the day's
- * plan is persisted, so this is a view of it rather than anything the client
- * decides. The one thing derived here is the grouping: the plan interleaves a
- * verse's repetitions round-robin, so the nth appearance of a learning verse
- * is its nth round, and a heading is drawn wherever that label changes.
+ * runner will take them. The order and the done/not-done are the server's; the
+ * grouping is the one thing derived here.
  */
 
 export type PathState = 'done' | 'current' | 'upcoming'
@@ -32,21 +27,13 @@ export interface Path {
   /** The only stop that can be entered; -1 once the day's plan is finished. */
   currentIndex: number
   complete: boolean
-  /** Memorized verses coming back today, for the subhead. */
   reviewCount: number
-  /** Learning repetitions, for the subhead. */
   roundCount: number
   secondsLeft: number
-  /** The stop the buttons lead into, or null when there is nothing left. */
   next: PathNode | null
 }
 
-/**
- * Rough seconds for one exercise: a beat to take in the line, plus a couple of
- * seconds a blank. Only ever shown rounded — it sizes the "about N min" line
- * and the per-stop meta, and pretending to more precision than that would be
- * dishonest about how much it can know.
- */
+/** Rough seconds for one exercise; only ever shown rounded. */
 const READ_SECONDS = 8
 const SECONDS_PER_BLANK = 2.5
 
@@ -55,20 +42,18 @@ function estimateSeconds(exercise: SessionExercise): number {
   return READ_SECONDS + SECONDS_PER_BLANK * blanks
 }
 
-/** Seconds to the nearest five, and to whole minutes once that reads better. */
 function durationLabel(seconds: number): string {
   if (seconds >= 90) return `${Math.round(seconds / 60)} min`
   return `${Math.round(seconds / 5) * 5} sec`
 }
 
-/** "about 6 min" — the tail of the subhead, never less than a minute. */
 export function minutesLabel(seconds: number): string {
   return `about ${Math.max(1, Math.round(seconds / 60))} min`
 }
 
 export function buildPath(exercises: SessionExercise[]): Path {
-  // A verse's nth learning exercise is its nth round of the day. Reviews come
-  // back once each, so they carry the queue's own label instead.
+  // A verse's nth learning exercise is its nth round of the day; reviews come
+  // back once each and carry the queue's own label instead.
   const rounds = new Map<string, number>()
   let previousGroup: string | null = null
   let reviewCount = 0

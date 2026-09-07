@@ -5,14 +5,9 @@ import Alert from './Alert'
 import TabBar from './TabBar'
 
 /**
- * The frame every data screen shares: the shell, the header row, the busy
- * announcement, and the error state. It exists so a route file can be read for
- * what the screen *is* — a header and a list of blocks — without the chrome and
- * the failure path in the way.
- *
- * It deliberately knows nothing about loading *content*. Each block below it
- * takes its data as a nullable prop and draws its own placeholder, so the frame
- * paints on the first frame and never tears down.
+ * The frame every data screen shares. It knows nothing about loading *content*:
+ * each block takes its data as a nullable prop and draws its own placeholder,
+ * so the frame paints immediately and never tears down.
  */
 
 type Layout = 'plain' | 'stack' | 'tabbed'
@@ -25,28 +20,23 @@ const SHELL: Record<Layout, string> = {
 
 interface Props {
   layout?: Layout
-  /** Extra class on the shell, e.g. Today's full-height `today-shell`. */
   className?: string
 
-  /** Start of the header row: a back control, or Today's wordmark. */
   leading?: ReactNode
-  /** The route supplies its own heading element — the class is a real design
-      distinction between the tab titles and the pushed-screen ones. */
+  /** The route supplies its own heading element: tab titles and pushed-screen
+      titles are a real design distinction. */
   title?: ReactNode
-  /** End of the header row: the translation tag, the settings icon. */
   trailing?: ReactNode
-  /** The lead paragraph under the header. */
   sub?: ReactNode
   subStyle?: CSSProperties
 
-  /** First load only. Drives `aria-busy` and the one announcement per screen. */
+  /** First load only. Drives `aria-busy` and one announcement per screen. */
   loading?: boolean
   loadingLabel?: string
 
-  /** Non-null opens the alert on top of the children, which stay put underneath. */
+  /** Non-null opens the alert; the children stay put underneath. */
   error?: string | null
   onRetry?: () => void
-  /** Extra controls under the alert's buttons, e.g. VerseDetail's "Back". */
   errorActions?: ReactNode
 
   children: ReactNode
@@ -70,9 +60,8 @@ export default function Screen({
   const shell = className ? `${SHELL[layout]} ${className}` : SHELL[layout]
   const hasHeader = leading || title || trailing
 
-  // An error the user has already waved off stays dismissed until a fresh
-  // one comes in — otherwise closing the alert would just pop it back open
-  // on the next render, since the error itself lives in the caller's hook.
+  // The error lives in the caller's hook, so a dismissal has to be remembered
+  // here or the alert pops straight back open on the next render.
   const [dismissed, setDismissed] = useState<string | null>(null)
   const dismiss = () => setDismissed(error)
 
@@ -93,8 +82,6 @@ export default function Screen({
         </p>
       )}
 
-      {/* One announcement for the whole screen; the placeholders themselves
-          are all aria-hidden. */}
       {loading && loadingLabel && (
         <span className='sr-only' role='status'>
           {loadingLabel}
@@ -110,8 +97,7 @@ export default function Screen({
         tone='warning'
         primaryLabel={onRetry ? 'Try again' : 'OK'}
         onPrimary={onRetry ?? dismiss}
-        // A route that supplies its own way out (e.g. VerseDetail's "Back to
-        // verses") doesn't also need the generic dismiss.
+        // A route with its own way out doesn't need the generic dismiss too.
         secondaryLabel={onRetry && !errorActions ? 'Dismiss' : undefined}
         onSecondary={onRetry && !errorActions ? dismiss : undefined}
         onClose={dismiss}
@@ -129,7 +115,6 @@ export default function Screen({
   )
 }
 
-/** The back arrow that pops history. */
 export function BackButton({
   onClick,
   label,
@@ -144,7 +129,6 @@ export function BackButton({
   )
 }
 
-/** The back arrow that navigates somewhere fixed. */
 export function BackLink({ to, label }: { to: string; label: string }) {
   return (
     <Link to={to} className='icon-btn' aria-label={label}>

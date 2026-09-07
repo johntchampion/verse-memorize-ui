@@ -27,8 +27,7 @@ export class ApiError extends Error {
   }
 }
 
-// --- Token storage (localStorage so a PWA relaunch stays signed in) --------
-
+// localStorage, so a PWA relaunch stays signed in.
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
@@ -47,7 +46,7 @@ export function clearSession(): void {
   localStorage.removeItem(USER_KEY)
 }
 
-/** Client-side expiry check on the JWT `exp` claim, for the route guard. */
+/** Client-side check on the JWT `exp` claim, for the route guard. */
 export function tokenIsExpired(token: string): boolean {
   try {
     const payload = JSON.parse(atob(token.split('.')[1])) as { exp?: number }
@@ -57,9 +56,7 @@ export function tokenIsExpired(token: string): boolean {
   }
 }
 
-// --- Fetch wrapper ----------------------------------------------------------
-
-/** Set by AuthContext so a 401 anywhere logs the user out and redirects. */
+/** Set by AuthContext so a 401 anywhere logs the user out. */
 let onUnauthorized: (() => void) | null = null
 
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
@@ -99,12 +96,8 @@ async function request<T>(
       ? data.error
       : null
 
-  // A 401 means the token itself is invalid/expired. "user not found" means
-  // the token is still well-formed but the account behind it is gone (e.g.
-  // the user deleted their account) — both leave the client stuck with a
-  // dead session, so both are treated as a logout. delete-account's own 401
-  // means something else entirely (a wrong password on an otherwise-valid
-  // session), so it's excluded here and left for its caller to handle.
+  // Both a 401 and "user not found" leave the client with a dead session.
+  // delete-account is excluded: its 401 is a wrong password, not a dead token.
   if (
     !path.startsWith('/auth') &&
     path !== '/api/me/delete-account' &&
@@ -122,8 +115,6 @@ async function request<T>(
   return data as T
 }
 
-// --- Endpoints --------------------------------------------------------------
-
 export const api = {
   signup: (email: string, password: string, timezone: string) =>
     request<AuthResponse>('/auth/signup', {
@@ -139,33 +130,26 @@ export const api = {
 
   me: () => request<MeResponse>('/api/me'),
 
-  // Every preference shares one endpoint. The API rejects an empty body, so
-  // the caller passes exactly the field it is changing.
+  // The API rejects an empty body, so callers pass only the field they change.
   updateProfile: (patch: {
     timezone?: string
     translation?: string
     remindersEnabled?: boolean
   }) => request<MeResponse>('/api/me', { method: 'PATCH', body: patch }),
 
-  /** Permanently deletes the account and everything derived from it. The
-      password re-confirms intent since this can't be undone. */
   deleteAccount: (password: string) =>
     request<DeleteAccountResponse>('/api/me/delete-account', {
       method: 'POST',
       body: { password },
     }),
 
-  /** The translations a user can pick between, for the Settings picker. */
   translations: () => request<TranslationsResponse>('/api/translations'),
 
-  // --- Push notifications ---------------------------------------------------
-
-  /** 503 when the deployment has no VAPID keys, which is how the settings
-      toggle knows to render as unavailable rather than as broken. */
+  /** 503 when the deployment has no VAPID keys — the toggle reads that as
+      unavailable rather than broken. */
   pushKey: () => request<PushKeyResponse>('/api/push/key'),
 
-  /** Registers this browser. Idempotent on the subscription's endpoint, so a
-      client may safely re-send it on every launch. */
+  /** Idempotent on the subscription's endpoint, so it is safe to re-send. */
   pushSubscribe: (subscription: PushSubscriptionJSON) =>
     request<{ subscribed: true }>('/api/push/subscribe', {
       method: 'POST',
@@ -178,13 +162,11 @@ export const api = {
       body: { endpoint },
     }),
 
-  /** Sends the reminder to the caller's own devices now, so a phone can be
-      checked without waiting for 9pm. */
   pushTest: () =>
     request<PushTestResponse>('/api/push/test', { method: 'POST' }),
 
-  /** Today's plan, resumable — or with `practice`, a drill of the slotted
-      verses that counts toward nothing and can be asked for repeatedly. */
+  /** Today's plan, resumable — or with `practice`, a repeatable drill of the
+      slotted verses that counts toward nothing. */
   sessionToday: (practice = false) =>
     request<SessionTodayResponse>(
       practice ? '/api/session/today?practice=true' : '/api/session/today',
@@ -210,37 +192,31 @@ export const api = {
   verse: (id: string) =>
     request<VerseDetailResponse>(`/api/verses/${encodeURIComponent(id)}`),
 
-  // --- The practice queue ---------------------------------------------------
-
   queue: () => request<QueueResponse>('/api/queue'),
 
-  /** Stores a custom queue order — the full list of queued verse ids. */
+  /** Takes the full list of queued verse ids. */
   setQueueOrder: (verseIds: string[]) =>
     request<QueueResponse>('/api/queue', {
       method: 'PUT',
       body: { verseIds },
     }),
 
-  /** Back to the default order. */
   resetQueue: () => request<QueueResponse>('/api/queue', { method: 'DELETE' }),
 
-  /** Moves a theme's queued verses to the front of the queue. The slots keep
-      what they're holding — they refill from the new front as they free up. */
+  /** The slots keep what they hold; they refill from the new front. */
   moveThemeToTop: (themeId: string) =>
     request<QueueResponse>('/api/queue/theme', {
       method: 'POST',
       body: { themeId },
     }),
 
-  /** Moves one verse into the next-up spot at the front of the queue. */
   moveVerseToFront: (verseId: string) =>
     request<QueueResponse>('/api/queue/next', {
       method: 'POST',
       body: { verseId },
     }),
 
-  /** Puts a verse straight into a chosen slot; the occupant steps aside with
-      its progress saved and rejoins the queue as next up. */
+  /** The displaced occupant keeps its progress and rejoins the queue next up. */
   replaceSlot: (verseId: string, slot: number) =>
     request<SlotReplaceResponse>('/api/slots/replace', {
       method: 'POST',

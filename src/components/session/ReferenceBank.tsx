@@ -1,10 +1,8 @@
 import type { ReferenceStep } from '../../lib/reference'
 import WordTile from './WordTile'
 
-/**
- * Choices for one step of the reference drill. A plain list, not the rolling
- * window the word bank needs — six chips always fit.
- */
+/** One step of the reference drill. A plain list, not the word bank's rolling
+    window — six chips always fit. */
 export default function ReferenceBank({
   board,
   isDone,
@@ -20,9 +18,8 @@ export default function ReferenceBank({
   onTap: (choice: string, position: number) => void
 }) {
   return (
-    // `minHeight` holds the dock at the height the word bank measured, so the
-    // swap doesn't move it, while still letting long book names take a fourth
-    // row instead of being clipped.
+    // Holds the dock at the height the word bank measured so the swap doesn't
+    // move it, while still letting long book names take a fourth row.
     <div
       className='word-bank ref-bank'
       role='group'

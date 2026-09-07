@@ -7,7 +7,6 @@ import SettingsLink from '../components/today/SettingsLink'
 import { combineApi, useApi } from '../hooks/useApi'
 import { buildPath, minutesLabel, type Path } from '../lib/path'
 
-/** What the day is asking for, and how far into it you are. */
 function heading(path: Path): { head: string; sub: string } {
   if (path.total === 0) {
     return {
@@ -16,8 +15,7 @@ function heading(path: Path): { head: string; sub: string } {
     }
   }
 
-  // What the day is made of, naming only the halves it actually has: a day
-  // with nothing due back shouldn't advertise the zero.
+  // Only the halves the day actually has — never "0 for review".
   const parts: string[] = []
   if (path.reviewCount > 0) parts.push(`${path.reviewCount} for review`)
   if (path.roundCount > 0) {
@@ -45,11 +43,7 @@ function heading(path: Path): { head: string; sub: string } {
   }
 }
 
-/**
- * The Today tab: the day laid out as a path, one stop per exercise. The stops
- * behind you are spent and the ones ahead are locked — the only way in is the
- * live stop, which is also where the button at the bottom leads.
- */
+/** The Today tab: the day as a path, one stop per exercise. */
 export default function Today() {
   const me = useApi(() => api.me())
   const session = useApi(() => api.sessionToday())
@@ -65,8 +59,7 @@ export default function Today() {
       leading={<span className='wordmark'>Verse Memorize</span>}
       trailing={
         <>
-          {/* Shown at zero too. It is the badge for the streak you are keeping,
-              and a day without one is exactly when saying so is worth most. */}
+          {/* Shown at zero too — that's when saying so is worth most. */}
           {me.data && (
             <span className='chip chip-streak streak-badge'>
               {me.data.streak} day streak

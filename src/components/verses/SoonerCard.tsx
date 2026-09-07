@@ -1,7 +1,5 @@
-/**
- * The offer to jump the queue, shown only for a verse that is actually waiting
- * in it — a non-null queue position means not memorized and not holding a slot.
- */
+/** The offer to jump the queue. A non-null position means the verse is waiting
+    in it: not memorized, not holding a slot. */
 export default function SoonerCard({
   position,
   disabled,

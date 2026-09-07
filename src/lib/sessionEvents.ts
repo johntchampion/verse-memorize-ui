@@ -1,11 +1,6 @@
 import type { SessionEventBody, SessionEventKind } from '../api/types'
 import { STAGE_LABELS } from './exercise'
 
-/**
- * A moment worth recapping on the completion screen. Moves are never announced
- * while the session runs — they land in the middle of answering, where they
- * only distract — so this is the one place a recorded event becomes copy.
- */
 export interface SessionEvent {
   icon: string
   iconBg: string
@@ -14,19 +9,11 @@ export interface SessionEvent {
   detailColor: string
 }
 
-/**
- * How each kind of move reads. The server decides what happened; this only
- * decides how to say it, which is why there is no comparing of stages left
- * here — every branch is a lookup.
- *
- * Losses are recapped as readily as wins. A session that quietly dropped a
- * verse a tier should say so; that's how the day-to-day rules become learnable.
- */
 interface Look {
   icon: string
   iconBg: string
   detailColor: string
-  /** Null where the copy has to be built from the stages the verse moved between. */
+  /** Null where the copy is built from the stages the verse moved between. */
   detail: string | null
 }
 
@@ -35,7 +22,6 @@ const GREEN = { iconBg: 'var(--green-wash)', detailColor: 'var(--green-text)' }
 const AMBER = { iconBg: 'var(--amber-wash)', detailColor: 'var(--amber-soft)' }
 
 const PRESENTATION: Record<SessionEventKind, Look> = {
-  // Tier moves spell out the two ends, so `detail` is built from the stages.
   tier_up: { icon: '↑', ...CORAL, detail: null },
   tier_down: { icon: '↓', ...CORAL, detail: null },
   graduated: {
@@ -81,7 +67,6 @@ function tierMove(event: SessionEventBody): string | null {
   return `${STAGE_LABELS[event.stageFrom]} → ${STAGE_LABELS[event.stageTo]}`
 }
 
-/** One recorded event, dressed for the completion screen. */
 export function presentEvent(event: SessionEventBody): SessionEvent {
   const look = PRESENTATION[event.kind]
   return {

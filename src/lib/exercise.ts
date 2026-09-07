@@ -1,20 +1,15 @@
 import type { Stage } from '../api/types'
 
 /**
- * Client-side exercise parsing.
- *
- * The API sends `blankedText` ("Do not be ____ about anything…") but never an
- * answer key — correctness is judged client-side and reported to
- * POST /api/attempt as a boolean. The answers are derived by aligning the
- * blanked text against the full verse text (available from GET /api/verses/:id
- * for any unlocked verse), using the same whitespace tokenization the backend
- * used to build the exercise.
+ * The API sends `blankedText` but never an answer key, so answers are derived
+ * client-side by aligning it against the full verse text.
  */
 
 /** The backend's blank marker, as it appears in `blankedText`. */
 export const BLANK = '____'
 
-/** Same word-core pattern as the backend's exerciseBuilder. */
+/** Word core: letters, digits, apostrophes and hyphens — matches the backend's
+    exerciseBuilder, so the two tokenize identically. */
 const WORD_RE = /[\p{L}\p{N}'’-]+/u
 
 export interface TextSegment {
@@ -24,11 +19,9 @@ export interface TextSegment {
 
 export interface BlankSegment {
   kind: 'blank'
-  /** Punctuation before the word, e.g. the quote in `"Do`. */
   punctBefore: string
   /** The hidden remainder of the word — sizes the rendered gap. */
   hidden: string
-  /** Punctuation after the word, e.g. the comma in `anything,`. */
   punctAfter: string
   /** The word the user must supply (original casing, no punctuation). */
   answer: string
@@ -38,10 +31,8 @@ export interface BlankSegment {
 
 export type ExerciseSegment = TextSegment | BlankSegment
 
-/**
- * Aligns `blankedText` with `fullText` token-by-token. Both came from the same
- * source split on whitespace, so indexes correspond 1:1.
- */
+/** Both texts came from the same source split on whitespace, so token indexes
+    correspond 1:1. */
 export function parseExercise(
   blankedText: string,
   fullText: string,
@@ -75,7 +66,6 @@ export function parseExercise(
   })
 }
 
-/** A run of verse text, or one blank paired with its position in fill order. */
 export type VerseChunk =
   | { kind: 'text'; text: string }
   | { kind: 'blank'; blankIndex: number; blank: BlankSegment }
@@ -99,7 +89,6 @@ export function splitIntoChunks(
 /** Curly quotes and apostrophes are the same character to a reader. */
 const canonWord = (w: string) => w.replace(/’/g, "'")
 
-/** Case-insensitive, curly-quote-tolerant comparison for single bank words. */
 export function wordsMatch(a: string, b: string): boolean {
   return canonWord(a).toLowerCase() === canonWord(b).toLowerCase()
 }
@@ -109,10 +98,7 @@ export function wordsMatchExactly(a: string, b: string): boolean {
   return canonWord(a) === canonWord(b)
 }
 
-/**
- * Forgiving full-verse comparison for typed exercises: case, punctuation and
- * extra whitespace don't count against recall.
- */
+/** Case, punctuation and extra whitespace don't count against recall. */
 export function normalizeTypedText(text: string): string {
   return text
     .toLowerCase()
@@ -132,17 +118,12 @@ export function shuffle<T>(items: T[]): T[] {
   return out
 }
 
-/** A random index into an array of this length (or one past the end, for insertion). */
 export function randomIndex(exclusiveMax: number): number {
   return Math.floor(Math.random() * exclusiveMax)
 }
 
-/**
- * Progression thresholds, mirrored from the API's `stageMachine.ts`. They are
- * display-only here — the server is the authority on every transition — but
- * they have to agree with it, so keep them in this one place rather than at
- * call sites.
- */
+/** Display-only mirrors of the API's `stageMachine.ts` — they must agree with
+    it, so they live here rather than at call sites. */
 export const TIER_ADVANCE_THRESHOLD = 3
 export const TIER_DOWNGRADE_THRESHOLD = 2
 export const REVIEW_ADVANCE_THRESHOLD = 3
@@ -151,11 +132,6 @@ export const REVIEW_DEMOTION_THRESHOLD = 2
 /** The review interval ladder, in days. */
 export const INTERVAL_PROGRESSION = [1, 3, 7, 14, 30]
 
-/**
- * The full progression, in order. The first three are *slotted* — a verse in
- * one of them occupies one of the user's three active slots; `review` and
- * `mastered` are reached only by graduating out of the third.
- */
 export const STAGE_SEQUENCE: Stage[] = [
   'learning_light',
   'learning_medium',
@@ -183,7 +159,6 @@ export const STAGE_LABELS: Record<Stage, string> = {
   mastered: 'Mastered',
 }
 
-/** Short label for the ladder, where the "blanks" suffix is implied. */
 export const STAGE_SHORT_LABELS: Record<Stage, string> = {
   learning_light: 'Easy',
   learning_medium: 'Medium',
@@ -192,37 +167,20 @@ export const STAGE_SHORT_LABELS: Record<Stage, string> = {
   mastered: 'Mastered',
 }
 
-/**
- * One wrong tap forgiven per this many blanks.
- *
- * A review exercise blanks every word, so a 75-word verse is 75 taps; treating
- * a single slip there the same as a slip on a 4-blank learning exercise would
- * make the two-miss review demotion far too easy to trigger. Short exercises
- * are unaffected — they don't earn a slip.
- */
+/** One wrong tap forgiven per this many blanks, so a 75-blank review exercise
+    isn't graded as harshly per-slip as a 4-blank learning one. */
 export const TILE_SLIP_PER_BLANKS = 20
 
-/** Wrong taps forgiven before a tile attempt is reported as a miss. */
 export function missTolerance(blankCount: number): number {
   return Math.floor(blankCount / TILE_SLIP_PER_BLANKS)
 }
 
-/**
- * Whether the exercise drills the reference after the verse text.
- *
- * Every stage but the gentlest. `learning_light` is a first meeting with the
- * words; asking where the verse lives before the words are there is two
- * unlearned things at once.
- */
+/** Every stage but the gentlest: at `learning_light` the words themselves are
+    still new, so the reference would be a second unlearned thing at once. */
 export function usesReferencePhase(stage: Stage): boolean {
   return stage !== 'learning_light'
 }
 
-/**
- * Wrong taps forgiven per reference step — one fat-finger tap each, three
- * across the drill. Tracked against its own budget rather than the text's:
- * `missTolerance` is a rate over blanks, and a 4-blank exercise earns no slip
- * at all, so folding the two together would fail an attempt on a single
- * mistapped book.
- */
+/** Tracked against its own budget rather than the text's, since a short
+    exercise earns no slip from `missTolerance` at all. */
 export const REFERENCE_SLIP_PER_STEP = 1

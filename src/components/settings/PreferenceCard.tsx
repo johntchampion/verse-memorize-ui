@@ -9,10 +9,7 @@ export interface Option {
   note?: string
 }
 
-/**
- * A labelled select and its save button, at their real heights, so the card
- * doesn't grow when the options arrive.
- */
+/** At the real heights, so the card doesn't grow when the options arrive. */
 function FieldSkeleton({ hasNote }: { hasNote: boolean }) {
   return (
     <>
@@ -36,26 +33,21 @@ function FieldSkeleton({ hasNote }: { hasNote: boolean }) {
 interface Props {
   eyebrow: string
   description: ReactNode
-  /** Label and id for the select itself. */
   label: string
   id: string
   /** Null until the choices are known; the card draws a placeholder. */
   options: Option[] | null
-  /** True when this card's options carry notes, so the placeholder makes room
-      for the line before it knows which option is selected. */
+  /** Makes the placeholder leave room for a note before the pick is known. */
   hasNote?: boolean
   pref: Preference
   saveLabel: string
-  /** A failure fetching the options, with its own retry — distinct from a
-      failure saving, which `pref` carries. */
+  /** A failure fetching the options — a failed save lives on `pref`. */
   loadError?: string | null
   onRetryLoad?: () => void
 }
 
-/**
- * One account preference: a heading, a picker, and a save button that stays
- * disabled until the pick differs from what's stored.
- */
+/** A picker and a save button, disabled until the pick differs from what's
+    stored. */
 export default function PreferenceCard({
   eyebrow,
   description,
@@ -110,8 +102,8 @@ export default function PreferenceCard({
               ))}
             </select>
           </div>
-          {/* The note of what's *selected*, not what's saved — so a licence is
-              visible before committing to it. */}
+          {/* Of what's selected, not what's saved: a licence should be visible
+              before committing to it. */}
           {selected?.note && (
             <p className='small muted' style={{ fontWeight: 600 }}>
               {selected.note}

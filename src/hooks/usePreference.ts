@@ -3,8 +3,8 @@ import { messageOf } from '../lib/errors'
 
 /**
  * One saved account preference: a local pick that only becomes the real value
- * once the server accepts it. Held apart from the profile fetch so choosing an
- * option doesn't wait on a round trip, and a failed save doesn't lose the pick.
+ * once the server accepts it, so choosing doesn't wait on a round trip and a
+ * failed save doesn't lose the pick.
  */
 export interface Preference {
   /** The pending pick if there is one, else what the server has. */
@@ -14,7 +14,6 @@ export interface Preference {
   saving: boolean
   error: string | null
   saved: boolean
-  /** Whether `value` differs from what's saved — i.e. there is work to do. */
   dirty: boolean
 }
 

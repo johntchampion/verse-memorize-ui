@@ -7,11 +7,8 @@ import { truncate } from '../../lib/verses'
 /** Slot rows to stand in for before the profile says how many are filled. */
 const SKELETON_SLOTS = 3
 
-/**
- * What's in the slots right now — the far end of the queue, shown so the line
- * has somewhere to lead. The verse list is only for the snippets; those verses
- * aren't in the queue payload.
- */
+/** What's in the slots now, so the waiting line has somewhere to lead. The
+    verse list is only for the snippets. */
 export default function QueueSlots({
   slots,
   verses,

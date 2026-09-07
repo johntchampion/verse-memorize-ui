@@ -3,7 +3,6 @@ import type { QueueVerse } from '../../api/types'
 import { Skeleton } from '../Skeleton'
 import { truncate } from '../../lib/verses'
 
-/** Waiting-list rows to stand in for — about a screenful. */
 const SKELETON_ROWS = 6
 
 /** Snippet placeholder widths, varied so the list doesn't look printed. */
@@ -17,7 +16,6 @@ function QueueChip({ verse }: { verse: QueueVerse }) {
   return null
 }
 
-/** A waiting-list row with its position real and everything else pending. */
 function QueueRowSkeleton({ index, width }: { index: number; width: string }) {
   return (
     <li className='queue-row'>
@@ -42,17 +40,13 @@ function QueueRowSkeleton({ index, width }: { index: number; width: string }) {
   )
 }
 
-/**
- * The waiting line, in the order slot refill will consume it. The order is
- * edited optimistically upstream, so this renders whatever ids it is handed
- * rather than the fetched order.
- */
+/** The waiting line, in refill order. The order is edited optimistically
+    upstream, so this renders the ids it is handed, not the fetched order. */
 export default function QueueList({
   ids,
   byId,
   onMove,
 }: {
-  /** Null until the queue lands. */
   ids: string[] | null
   byId: Map<string, QueueVerse>
   onMove: (index: number, delta: number) => void

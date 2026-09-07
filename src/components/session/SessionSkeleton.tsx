@@ -8,15 +8,8 @@ const SKELETON_TILES = [96, 68, 118, 82, 74, 104, 88, 70, 112]
 const SKELETON_TILE_H = 53
 const SKELETON_BANK_H = SKELETON_TILE_H * 3 + 11 * 2
 
-/**
- * The session frame while today's exercises load. This is the longest wait in
- * the app — the session has to land before the verse texts can even be asked
- * for — so the whole runner is drawn up front: the exit, the progress rail at
- * zero, the verse card, and the dock. Only the words are missing.
- *
- * It mirrors TileExercise, the more common of the two exercise types; a typed
- * one still settles without a jump, since both share the card and the dock.
- */
+/** The longest wait in the app — the session lands before the verse texts can
+    even be asked for — so the whole runner is drawn up front. */
 export default function SessionSkeleton() {
   return (
     <main className='shell stack shell-full' aria-busy='true'>

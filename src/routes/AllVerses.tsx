@@ -5,10 +5,7 @@ import ArcList from '../components/verses/ArcList'
 import HundredStats from '../components/verses/HundredStats'
 import { useApi } from '../hooks/useApi'
 
-/**
- * The All tab: every verse in the arc, in order — memorized ones green, the
- * rest waiting their turn.
- */
+/** The All tab: every verse in the arc, in canon order. */
 export default function AllVerses() {
   const verses = useApi(() => api.verses())
 

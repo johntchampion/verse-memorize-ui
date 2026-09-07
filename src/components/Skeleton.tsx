@@ -12,12 +12,8 @@ interface Props {
   style?: CSSProperties
 }
 
-/**
- * A single placeholder block. Sized and positioned by the caller so it lands
- * exactly where the real content will, leaving nothing to shift when data
- * arrives. Always hidden from assistive tech — the loading state is announced
- * once per region instead (see the `sr-only` status lines in the routes).
- */
+/** Always hidden from assistive tech: the loading state is announced once per
+    region instead, by the `sr-only` status lines in Screen. */
 export function Skeleton({
   w,
   h,
@@ -40,10 +36,7 @@ export function Skeleton({
 /** Widths for the trailing line, so a paragraph ends ragged rather than flush. */
 const LAST_LINE = '62%'
 
-/**
- * A run of text lines. `widths` overrides the default full-width-until-last
- * shape when a block should taper differently.
- */
+/** `widths` overrides the default full-width-until-last shape. */
 export function SkeletonText({
   lines = 3,
   widths,

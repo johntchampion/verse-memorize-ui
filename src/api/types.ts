@@ -1,10 +1,7 @@
 /**
- * Mirrors the response shapes of verse-memorize-api. Snake_case fields come
- * straight from database rows the API returns verbatim (user_verse, attempt);
- * camelCase fields are API-composed.
- *
- * The progression model itself is specified in the API's README — this file
- * only mirrors its wire format.
+ * Mirrors verse-memorize-api's wire format. Snake_case fields are database rows
+ * returned verbatim; camelCase fields are API-composed. The progression model
+ * itself is specified in the API's README.
  */
 
 export type Stage =
@@ -18,17 +15,14 @@ export type ExerciseType = 'tile_fill_blank' | 'type_fill_blank'
 
 export type VerseStatus = 'not_started' | 'active' | 'review' | 'mastered'
 
-/**
- * A `user_verse` row, returned verbatim. It holds both the learning-tier state
- * and the review schedule — a verse is only ever in one regime at a time, so
- * there is no separate schedule row.
- */
+/** A `user_verse` row: learning-tier state and review schedule together, since
+    a verse is only ever in one regime at a time. */
 export interface UserVerse {
   id: string
   user_id: string
   verse_id: string
   stage: Stage
-  /** Zeroed by any wrong answer. In a learning tier the run must also land
+  /** Zeroed by any wrong answer; in a learning tier the run must also land
       inside one calendar day — see `streak_date`. */
   consecutive_correct: number
   /** Zeroed by any correct answer. May span days. */
@@ -52,7 +46,6 @@ export interface UserVerse {
   graduated_at: string | null
 }
 
-/** Scheduling for a verse in review, composed by GET /api/verses/:id. */
 export interface VerseSchedule {
   /** Local date (YYYY-MM-DD). */
   dueAt: string
@@ -82,11 +75,9 @@ export interface SlotVerse {
   stage: Stage
   consecutiveCorrect: number
   consecutiveIncorrect: number
-  /** Local date the correct-run was accrued on; a run from an earlier day no
-      longer counts toward advancing. */
+  /** A run from an earlier day no longer counts toward advancing. */
   streakDate: string | null
-  /** This verse already changed tier today, so it can't change again until
-      tomorrow. */
+  /** Already changed tier today, so it can't change again until tomorrow. */
   tierChangeUsedToday: boolean
 }
 
@@ -97,8 +88,7 @@ export interface MeResponse {
     timezone: string
     translation: string
     createdAt: string
-    /** The daily-reminder opt-in. Off until the user turns it on. */
-    remindersEnabled: boolean
+      remindersEnabled: boolean
   }
   streak: number
   completedToday: boolean
@@ -111,15 +101,7 @@ export interface MeResponse {
   }
 }
 
-/**
- * What a verse did during a session, as the server recorded it.
- *
- * The completion screen used to work these out for itself by comparing the
- * stage it had cached against the one an attempt came back with. That could
- * only remember the current sitting — a session resumed after a quit lost
- * everything earned before it — and the cached stage went stale as soon as a
- * verse upgraded, so its remaining repetitions re-reported the same move.
- */
+/** What a verse did during a session, as the server recorded it. */
 export type SessionEventKind =
   | 'tier_up'
   | 'tier_down'
@@ -135,7 +117,7 @@ export interface SessionEventBody {
   id: string
   kind: SessionEventKind
   verseId: string
-  /** Rendered server-side, so a slot event can name the verse that arrived. */
+  /** Rendered server-side, so a slot event can name the verse. */
   reference: string
   /** Null for slot events, which aren't a move along the ladder. */
   stageFrom: Stage | null
@@ -160,8 +142,6 @@ export interface SessionExercise {
   completed: boolean
   /** How it was answered, or null while still outstanding. */
   correct: boolean | null
-  /** The verse's progress as it stands, in the shape POST /api/attempt
-      returns. */
   userVerse: UserVerse
 }
 
@@ -174,9 +154,8 @@ export interface SessionTodayResponse {
   count: number
   completedCount: number
   correctCount: number
-  /** Everything the day has moved so far — the whole day, not just the part
-      this client was open for, so a resumed session can still recap it all.
-      Always empty for a practice drill, whose recap is its own. */
+  /** The whole day, not just this client's part of it, so a resumed session
+      still recaps everything. Always empty for a practice drill. */
   events: SessionEventBody[]
 }
 
@@ -188,9 +167,8 @@ export interface AttemptOutcome {
   /** Rows slotted by the refill this attempt triggered. A row with a
       `graduated_at` is a verse returning to practice, not a new one. */
   slotsFilled: UserVerse[]
-  /** Just what this attempt moved — a delta, unlike session/today's whole
-      day. A verse re-slotted by this attempt's own refill is reported once,
-      here, and not again under `slotsFilled`. */
+  /** A delta, unlike session/today's whole day. A verse re-slotted by this
+      attempt's own refill is reported here and not again in `slotsFilled`. */
   events: SessionEventBody[]
 }
 
@@ -210,8 +188,8 @@ export interface VerseListItem {
   order: number
   status: VerseStatus
   stage: Stage | null
-  /** Pulled out of review and parked until a slot opens. Such a verse still
-      reports `status: 'review'`, so this has to be checked alongside it. */
+  /** Parked until a slot opens. Such a verse still reports `status: 'review'`,
+      so this has to be checked alongside it. */
   needsRelearning: boolean
   slot: number | null
   graduatedAt: string | null
@@ -234,8 +212,7 @@ export interface VerseDetailResponse {
   }
   /** Themes this verse belongs to — possibly several, possibly none. */
   themes: { id: string; name: string }[]
-  /** 1-based spot in the practice queue (1 = next up), or null when the verse
-      isn't queued — it's holding a slot or memorized. */
+  /** 1-based (1 = next up); null when the verse holds a slot or is memorized. */
   queuePosition: number | null
   status: VerseStatus
   graduatedAt: string | null
@@ -296,12 +273,10 @@ export interface TranslationsResponse {
   default: string
 }
 
-/** The server's VAPID public key, for PushManager.subscribe. */
 export interface PushKeyResponse {
   publicKey: string
 }
 
-/** What a fan-out to the caller's devices did. */
 export interface PushTestResponse {
   sent: number
   /** Endpoints the push service reported dead, now deleted. */

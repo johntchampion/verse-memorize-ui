@@ -1,13 +1,3 @@
-/**
- * A spring, small enough to read in one sitting.
- *
- * Semi-implicit Euler at a fixed sub-step — the same integrator the animation
- * libraries use, so their tension/friction numbers mean the same thing here.
- * The point of a spring over a CSS transition is interruption: a spring already
- * in flight carries its velocity into whatever you ask for next, so a finger can
- * catch a closing sheet and throw it back open without anything snapping.
- */
-
 export interface SpringConfig {
   tension: number
   friction: number
@@ -16,33 +6,18 @@ export interface SpringConfig {
   clamp?: boolean
 }
 
-/**
- * Settling home. Damping ratio ~0.74, so it overshoots by ~3% of however far
- * it had to travel — a real bounce on a full-height entrance, and nothing you
- * can see when a 30px pull springs back. That proportionality is the whole
- * reason to run a spring instead of a fixed curve.
- */
+/** Settling home. Damping ratio ~0.74, so it overshoots by ~3% of its travel. */
 export const SETTLE: SpringConfig = { tension: 220, friction: 22, mass: 1 }
 
-/**
- * Leaving. Stiffer and still slightly underdamped, so the exit takes about
- * 250ms however tall the sheet is; whatever it overshoots by is off-screen.
- */
+/** Leaving. Clamped because whatever it overshoots by is off-screen anyway. */
 export const CLOSE: SpringConfig = {
   tension: 320,
   friction: 30,
   mass: 1,
-  // Once the panel is off the bottom of the screen there is nothing left to
-  // watch: land on the target and be done, rather than spending another
-  // hundred milliseconds converging on it out of sight.
   clamp: true,
 }
 
-/**
- * Close enough to home, and slow enough, to call it done (px and px/s). Both
- * loose enough that the spring stops rather than crawling the last pixel —
- * an asymptote is invisible on screen but keeps the sheet mounted.
- */
+/** Close enough to home, and slow enough, to call it done (px and px/s). */
 const REST_OFFSET = 0.5
 const REST_VELOCITY = 8
 
@@ -53,11 +28,10 @@ const STEP_MS = 1000 / 120
 const MAX_FRAME_MS = 64
 
 export interface Spring {
-  /** Jump straight to a value and kill any motion — one drag frame. */
   set: (value: number) => void
   /**
-   * Animate to `target`. Velocity is px/s and defaults to the velocity the
-   * spring already has, so re-targeting mid-flight stays continuous.
+   * Velocity is px/s and defaults to the velocity the spring already has, so
+   * re-targeting mid-flight stays continuous.
    */
   to: (target: number, velocity?: number, config?: SpringConfig) => void
   stop: () => void
@@ -65,6 +39,8 @@ export interface Spring {
   readonly moving: boolean
 }
 
+/** Semi-implicit Euler at a fixed sub-step, so tension/friction numbers match
+    what the animation libraries mean by them. */
 export function createSpring(
   onFrame: (value: number) => void,
   onRest?: () => void,
@@ -77,8 +53,7 @@ export function createSpring(
   let prev = 0
   /** Which way this run is travelling, for `clamp` to recognise arrival. */
   let heading = 0
-  // Time left over from the last frame, carried into the next one so the
-  // simulation runs at the same rate on any display.
+  /** Time left over from the last frame, so the rate is display-independent. */
   let carry = 0
 
   const stop = () => {

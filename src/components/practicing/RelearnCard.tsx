@@ -1,11 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { VerseListItem } from '../../api/types'
 
-/**
- * Verses pulled out of review for repeated misses. They have no due date and
- * sit out of the session entirely until a slot opens up for them. Conditional
- * on the list, and usually empty, so it has no placeholder.
- */
+/** Verses pulled out of review for repeated misses: no due date, out of the
+    session entirely until a slot opens. Usually empty, so no placeholder. */
 export default function RelearnCard({
   verses,
 }: {

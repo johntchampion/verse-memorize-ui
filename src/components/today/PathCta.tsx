@@ -2,16 +2,10 @@ import { Link } from 'react-router-dom'
 import type { Path } from '../../lib/path'
 import { Skeleton } from '../Skeleton'
 
-/**
- * The button under the path. It leads exactly where the live stop on the path
- * leads — into the day's plan at the first exercise still outstanding — until
- * the plan is finished, when it turns into the way to keep drilling instead.
- * Practice is separate work: it counts toward nothing and never comes back
- * with a path to walk.
- */
+/** Leads exactly where the live stop leads, until the plan is finished — then
+    it becomes the way into extra practice, which counts toward nothing. */
 export default function PathCta({ path }: { path: Path | null }) {
-  // Neutral, and sized to the button it stands in for, so the settle is small
-  // whichever of the two lands.
+  // Sized to the button it stands in for, so the settle is small either way.
   if (!path) {
     return (
       <div className='card' style={{ padding: 22, borderRadius: 26 }}>
@@ -26,8 +20,7 @@ export default function PathCta({ path }: { path: Path | null }) {
     )
   }
 
-  // Nothing due and nothing in a slot: there is no session to enter and no
-  // verse to drill either.
+  // Nothing due and nothing in a slot: nothing to enter and nothing to drill.
   if (path.total === 0) return null
 
   if (path.complete) {

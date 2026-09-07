@@ -13,24 +13,21 @@ import Signup from './routes/Signup';
 import Today from './routes/Today';
 import VerseDetail from './routes/VerseDetail';
 
-/** Route guard: no valid JWT → the sign-in screen, except the root, which
-    sends signed-out visitors to the welcome flow instead. */
+/** No valid JWT → the sign-in screen, or the welcome flow from the root. */
 function RequireAuth({ children, fallback = '/login' }: { children: React.ReactNode; fallback?: string }) {
   const { token } = useAuth();
   if (!token || tokenIsExpired(token)) return <Navigate to={fallback} replace />;
   return children;
 }
 
-/** Keeps signed-in users out of the auth screens. */
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   if (token && !tokenIsExpired(token)) return <Navigate to="/" replace />;
   return children;
 }
 
-/** Matched against the location it is handed rather than the current one, so
-    the screen being animated away keeps rendering itself — and keeps its own
-    params — while it slides off. */
+/** Matched against the location it is handed, not the current one, so a screen
+    animating away keeps rendering itself and its own params. */
 function AppRoutes({ location }: { location: Location }) {
   return (
     <Routes location={location}>

@@ -1,12 +1,3 @@
-/**
- * The browser half of the daily reminder.
- *
- * Everything here needs a secure context, and on iOS it needs a PWA installed
- * to the Home Screen — in a Safari tab `PushManager` is simply absent, which is
- * why the capability check below is enough on its own and no user-agent
- * sniffing is involved in deciding whether push *works*. `isIos` exists only to
- * word the explanation.
- */
 import { api } from '../api/client'
 
 export function pushSupported(): boolean {
@@ -65,15 +56,9 @@ function sameKey(subscription: PushSubscription, key: Uint8Array): boolean {
   )
 }
 
-/**
- * Subscribes this browser and records the preference on the server.
- *
- * Must be called straight from a user gesture. `requestPermission` comes first
- * and before any `await` on purpose: Safari only honours it while the gesture
- * is still on the stack, and fetching the VAPID key first — which is the
- * natural way to write this — loses it.
- */
 export async function enablePush(): Promise<void> {
+  // Must run before any await: Safari only honours requestPermission while the
+  // user gesture is still on the stack.
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new PermissionRefused(permission)
 
@@ -82,13 +67,9 @@ export async function enablePush(): Promise<void> {
 }
 
 /**
- * Registers this browser against the server's current key, reusing an existing
- * subscription only when it was made with that same key.
- *
- * The comparison is what makes a server key change recoverable: a subscription
- * made against a different key produces pushes this server cannot sign, and
- * reusing it blindly is the "it worked yesterday" failure with nothing in the
- * UI to explain it.
+ * Reuses an existing subscription only when it was made with the server's
+ * current key — one made against a different key produces pushes this server
+ * cannot sign, and reusing it blindly is an unexplainable silent failure.
  */
 export async function subscribeThisBrowser(): Promise<void> {
   const { publicKey } = await api.pushKey()
@@ -101,8 +82,7 @@ export async function subscribeThisBrowser(): Promise<void> {
     subscription = null
   }
   subscription ??= await registration.pushManager.subscribe({
-    // Required: Chrome rejects a subscription that reserves the right to push
-    // silently.
+    // Chrome rejects a subscription that reserves the right to push silently.
     userVisibleOnly: true,
     applicationServerKey: key as BufferSource,
   })
@@ -110,26 +90,19 @@ export async function subscribeThisBrowser(): Promise<void> {
   await api.pushSubscribe(subscription.toJSON() as PushSubscriptionJSON)
 }
 
-/**
- * Stops the reminders.
- *
- * Server first: if the browser-side unsubscribe then fails, the half that
- * matters — "stop sending me these" — has already landed.
- */
 export async function disablePush(): Promise<void> {
+  // Server first: if the browser-side unsubscribe then fails, the half that
+  // matters has already landed.
   await api.updateProfile({ remindersEnabled: false })
 
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()
   if (!subscription) return
 
-  // Best effort: the row is harmless once the preference is off, and the
-  // scheduler gates on the preference.
   await api.pushUnsubscribe(subscription.endpoint).catch(() => {})
   await subscription.unsubscribe()
 }
 
-/** Whether this browser currently holds a subscription. */
 export async function hasLocalSubscription(): Promise<boolean> {
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()

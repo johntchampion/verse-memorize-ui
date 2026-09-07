@@ -36,8 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (email: string, password: string, timezone?: string) => {
-    // The server computes day boundaries from this; the browser knows it
-    // best, unless the user picked one themselves (onboarding does).
+    // The server computes day boundaries from this, and the browser knows it
+    // best — unless the user picked one themselves, as onboarding does.
     const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const res = await api.signup(email, password, tz);
     storeSession(res.token, res.userId);

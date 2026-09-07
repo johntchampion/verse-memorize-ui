@@ -1,21 +1,14 @@
 import { useEffect } from 'react'
 
-/**
- * How many overlays currently want the page held still. Counted rather than
- * flagged so a second sheet opening over a first can't unlock the page when it
- * alone closes.
- */
+/** Counted rather than flagged, so a second sheet closing can't unlock the
+    page while the first is still up. */
 let locks = 0
 let restoreTo = 0
 
 /**
- * Freezes the document behind an overlay while `active`.
- *
- * `position: fixed` rather than `overflow: hidden`: this app installs to the
- * iOS home screen, where hidden overflow on the body still lets a touch drag
- * the page. Pinning the body and offsetting it by the current scroll position
- * keeps what's behind exactly where it was, and the scroll position goes back
- * on release.
+ * Freezes the document behind an overlay. `position: fixed` rather than
+ * `overflow: hidden`: on the iOS home screen hidden overflow still lets a touch
+ * drag the page.
  */
 export function useScrollLock(active: boolean) {
   useEffect(() => {
@@ -40,7 +33,7 @@ export function useScrollLock(active: boolean) {
       body.style.right = ''
       body.style.width = ''
       body.style.overflow = ''
-      // Instant, even if something up the tree asked for smooth scrolling:
+      // Instant even if something up the tree asked for smooth scrolling:
       // returning to where you were shouldn't look like a scroll.
       const html = document.documentElement
       const behavior = html.style.scrollBehavior

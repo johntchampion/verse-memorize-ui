@@ -3,14 +3,10 @@ import { Link } from 'react-router-dom'
 import type { PathNode } from '../../lib/path'
 import { Skeleton } from '../Skeleton'
 
-/**
- * How much of each end of the scroller the mask has already begun to dissolve.
- * A stop sitting inside this band is on screen but half faded, so it counts as
- * out of view — see `.path-scroll` in index.css, which these match.
- */
+/** The scroller's fade band: a stop inside it is on screen but half dissolved,
+    so it counts as out of view. Matches `.path-scroll` in index.css. */
 const FADE = 30
 
-/** A stop, in whichever of the three states it is in. */
 function Stop({
   node,
   ref,
@@ -35,8 +31,7 @@ function Stop({
     </>
   )
 
-  // Only the next stop is a way in. The ones behind are spent and the ones
-  // ahead aren't reachable yet — the path is walked in order.
+  // Only the live stop is a way in; the path is walked in order.
   if (node.state === 'current') {
     return (
       <Link
@@ -52,7 +47,6 @@ function Stop({
   return <div className={`path-row path-row-${node.state}`}>{body}</div>
 }
 
-/** A stand-in of the same shape, so the path doesn't shift when it lands. */
 function PathSkeleton() {
   return (
     <div className='path-scroll'>
@@ -74,15 +68,8 @@ function PathSkeleton() {
   )
 }
 
-/**
- * Today's stops, drawn down a single rail: what's been done, where you are,
- * and what's still ahead. Only rendered while the path is still being
- * walked — once it's done, Today swaps in a full-screen finish instead.
- *
- * This is the only part of the screen that scrolls — the heading above holds
- * its place — and a day far enough along that the live stop starts off screen
- * scrolls itself to it.
- */
+/** Today's stops down a single rail. The only part of the screen that scrolls,
+    and it scrolls itself to the live stop when that starts off screen. */
 export default function PathList({ nodes }: { nodes: PathNode[] | null }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLAnchorElement>(null)
@@ -99,14 +86,12 @@ export default function PathList({ nodes }: { nodes: PathNode[] | null }) {
     const box = row.getBoundingClientRect()
     if (box.top >= view.top + FADE && box.bottom <= view.bottom - FADE) return
 
-    // Centred rather than just-barely-in: the stop being arrived at should read
-    // as the subject of the screen, not as something that scraped into it.
+    // Centred, so the stop reads as the subject of the screen.
     scroller.scrollTop += box.top - view.top - (view.height - box.height) / 2
   }, [currentIndex])
 
   if (!nodes) return <PathSkeleton />
-  // Nothing due and nothing in a slot — there is no path to draw, and the
-  // heading above has already said so.
+  // Nothing due; the heading above has already said so.
   if (nodes.length === 0) return null
 
   return (

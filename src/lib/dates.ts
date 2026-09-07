@@ -1,11 +1,6 @@
 /**
- * Day boundaries, mirroring the API's `lib/dates.ts`.
- *
- * Every "same day" question in the progression model — whether a correct run
- * is still alive, whether the one-tier-change-per-day cap is spent — is a
- * calendar-day question in the *user's* timezone, not the browser's. Comparing
- * against `new Date()` locally would disagree with the server for anyone whose
- * device zone differs from their profile zone.
+ * Every "same day" question in the progression model is a calendar-day
+ * question in the *user's* profile timezone, not the browser's.
  */
 
 /** `YYYY-MM-DD` for "now" as seen in `timezone`. */

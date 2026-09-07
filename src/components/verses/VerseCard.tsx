@@ -2,13 +2,8 @@ import type { VerseDetailResponse } from '../../api/types'
 import { Skeleton, SkeletonText } from '../Skeleton'
 import TranslationTag from '../TranslationTag'
 
-/**
- * The verse itself: reference, translation tag, text, themes. The only block on
- * the detail screen that always exists, so it is also the only one that stands
- * in for itself while the fetch is out — everything below depends on whether
- * the verse has been started at all, and a placeholder there would promise a
- * card that may never arrive.
- */
+/** The only block on the detail screen that always exists, so it is the only
+    one with a placeholder — the rest may never arrive at all. */
 export default function VerseCard({
   detail,
 }: {

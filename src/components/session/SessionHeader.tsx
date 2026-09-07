@@ -2,15 +2,8 @@ import { Link } from 'react-router-dom'
 import ProgressBar from '../ProgressBar'
 import { Skeleton } from '../Skeleton'
 
-/**
- * The runner's top row: the way out, how far through, and the count. A total of
- * zero means the session hasn't landed yet, so the rail sits empty and the
- * count stands in for itself.
- *
- * The count reads one ahead of `done` because it names the exercise in hand.
- * At the end of the session `done` reaches the total and there is no next one
- * to name, so it clamps and sits on the last.
- */
+/** The runner's top row. The count reads one ahead of `done` because it names
+    the exercise in hand, clamping at the total once there is no next one. */
 export default function SessionHeader({
   done,
   total,

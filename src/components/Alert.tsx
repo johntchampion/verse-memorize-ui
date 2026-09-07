@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { reducedMotion } from '../lib/motion'
 
 const EXIT_MS = 180
 
@@ -7,26 +8,19 @@ interface Props {
   open: boolean
   title: string
   message: ReactNode
-  /** Which icon and wash to show — a hard stop vs. something to recover from. */
+  /** A hard stop vs. something to recover from. */
   tone?: 'danger' | 'warning'
   primaryLabel: string
   onPrimary: () => void
-  /** Plain-text second action, e.g. an exit while the primary retries. */
   secondaryLabel?: string
   onSecondary?: () => void
-  /** Backdrop tap and Escape both call this. */
   onClose: () => void
-  /** False for a choice that has to be made here: the backdrop and Escape stop closing it. */
+  /** False for a choice that has to be made here. */
   dismissible?: boolean
-  /** Extra controls under the two buttons, e.g. a route's own way back. */
   extra?: ReactNode
 }
 
-/**
- * Centered modal over a dimmed backdrop for an error that needs acknowledging
- * — the confirm/recover alert. Portals to the body and leaves whatever the
- * page was showing untouched underneath.
- */
+/** Centered confirm/recover modal, portalled over the page. */
 export default function Alert({
   open,
   title,
@@ -40,8 +34,7 @@ export default function Alert({
   dismissible = true,
   extra,
 }: Props) {
-  // `open` leads, `mounted` and `visible` trail it: mounting is immediate,
-  // unmounting waits out the exit animation (or skips it under reduced motion).
+  // `open` leads; `mounted` trails it until the exit animation has played.
   const [mounted, setMounted] = useState(open)
   const [visible, setVisible] = useState(open)
 
@@ -57,10 +50,10 @@ export default function Alert({
       return () => cancelAnimationFrame(frame)
     }
     queueMicrotask(() => setVisible(false))
-    const reduced = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches
-    const timer = setTimeout(() => setMounted(false), reduced ? 0 : EXIT_MS)
+    const timer = setTimeout(
+      () => setMounted(false),
+      reducedMotion() ? 0 : EXIT_MS,
+    )
     return () => clearTimeout(timer)
   }, [open])
 

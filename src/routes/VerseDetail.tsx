@@ -11,16 +11,12 @@ import { useApi } from '../hooks/useApi'
 import { useBack } from '../hooks/useBack'
 import { messageOf } from '../lib/errors'
 
-/**
- * One verse, end to end: the text, where it sits on the ladder, every attempt
- * on it, and — while it's still waiting in the queue — the way to pull it into
- * practice now.
- */
+/** One verse end to end: text, ladder position, attempts, and the way to pull
+    it into practice while it is still queued. */
 export default function VerseDetail() {
   const { id } = useParams<{ id: string }>()
   const back = useBack()
   const detail = useApi(() => api.verse(id ?? ''))
-  // Slot occupants, for the "put it in a practice slot" picker.
   const me = useApi(() => api.me())
 
   const [slotSheet, setSlotSheet] = useState(false)
@@ -29,8 +25,8 @@ export default function VerseDetail() {
 
   const data = detail.data
 
-  // The error clears on the sheet's `onExited`, so it doesn't flicker away
-  // underneath the exit animation.
+  // The error clears on `onExited`, so it doesn't flicker away under the
+  // sheet's exit animation.
   const closeSlotSheet = () => setSlotSheet(false)
 
   const confirmSlotAction = (verseId: string, pick: number) => {

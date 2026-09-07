@@ -23,10 +23,7 @@ function chipClass(userVerse: UserVerse): string {
   return 'chip chip-active'
 }
 
-/**
- * What this verse needs next, in the terms the state machine actually uses:
- * consecutive-answer runs, not a score.
- */
+/** What this verse needs next, in consecutive-answer runs rather than a score. */
 function progressCopy(userVerse: UserVerse): string {
   const { consecutive_correct: right, consecutive_incorrect: wrong } = userVerse
 
@@ -35,8 +32,6 @@ function progressCopy(userVerse: UserVerse): string {
   }
 
   if (isLearningStage(userVerse.stage)) {
-    // The advancing run has to fit inside one calendar day, so a run from an
-    // earlier day is already dead as far as the server is concerned.
     const live = userVerse.streak_date !== null
     if (wrong > 0) {
       const left = TIER_DOWNGRADE_THRESHOLD - wrong
@@ -58,10 +53,7 @@ function progressCopy(userVerse: UserVerse): string {
   return `${right} of ${REVIEW_ADVANCE_THRESHOLD} correct reviews toward the next, longer interval.`
 }
 
-/**
- * Where this verse sits on the ladder and what moves it. Absent entirely until
- * the verse has been started — there is no progress to place.
- */
+/** Absent until the verse has been started — there is no progress to place. */
 export default function ProgressCard({
   detail,
 }: {
@@ -99,8 +91,7 @@ export default function ProgressCard({
       {(schedule || graduatedAt || parked) && status !== 'not_started' && (
         <div className='stat-tiles' style={{ marginTop: 14 }}>
           {parked ? (
-            // Queued for relearning: unscheduled by design, so there is no
-            // next-review date to show until a slot picks it up.
+            // Unscheduled by design until a slot picks it up.
             <div className='stat-tile'>
               <div className='stat-tile-value'>Waiting</div>
               <div className='stat-tile-label'>for a slot</div>

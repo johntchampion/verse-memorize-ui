@@ -17,10 +17,7 @@ function formatDay(iso: string): string {
   })
 }
 
-/**
- * Every attempt on this verse: the hit rate, a block strip, and the ten most
- * recent in words. Absent until there is a first attempt to show.
- */
+/** Every attempt on this verse. Absent until there is a first one to show. */
 export default function HistoryCard({
   detail,
 }: {

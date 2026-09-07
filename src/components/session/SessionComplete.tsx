@@ -2,23 +2,14 @@ import { type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { SessionEvent } from '../../lib/sessionEvents'
 
-/** Rows enter in turn, but a long list shouldn't push the way out off the end. */
+/** Rows enter in turn, capped so a long list can't push the exit off the end. */
 const ROW_STEP = 60
 const ROW_CAP = 6
 const ROWS_AT = 420
 
-/** The screen assembles top-down; each block waits its turn to rise in. */
 const enter = (ms: number) => ({ '--enter': `${ms}ms` }) as CSSProperties
 
-/**
- * The end of a session: the streak it kept, what it added up to, and every
- * verse that moved on the ladder along the way.
- *
- * It arrives in pieces rather than all at once, and the streak is the piece it
- * arrives for — the ring draws itself closed and the count turns over as it
- * lands. That only happens when this session is what recorded the day; extra
- * practice on a day already kept has nothing to turn over.
- */
+/** The end of a session: the streak, the totals, and every verse that moved. */
 export default function SessionComplete({
   streak,
   recorded,
@@ -28,11 +19,8 @@ export default function SessionComplete({
   correct,
   events,
 }: {
-  /** Null when the streak fetch failed — the session still counted. */
   streak: number | null
-  /** False when today was already recorded; this was extra practice. */
   recorded: boolean
-  /** A drill rather than the day's path: it moved verses, but kept no day. */
   practice?: boolean
   exercises: number
   verses: number
@@ -46,10 +34,8 @@ export default function SessionComplete({
         ? `zero misses on ${correct} of them`
         : 'every miss still teaches'
 
-  // Recording the day is what moved the streak, so the number we arrived with
-  // was one lower — the first day of all included, which is the turn from
-  // nothing to something and the one most worth watching. Null when this
-  // session moved nothing: a day already kept has no increment to show.
+  // Recording the day is what moved the streak, so we arrived one lower. Null
+  // when this session moved nothing — a day already kept has no turn to show.
   const previous = recorded && streak !== null && streak >= 1 ? streak - 1 : null
 
   const tail = ROWS_AT + Math.min(events.length, ROW_CAP) * ROW_STEP
@@ -69,10 +55,8 @@ export default function SessionComplete({
                 {streak}
               </span>
             ) : (
-              /* Both numbers are on screen the whole time, stacked in one
-                 grid cell. The turn-over is two halves of one movement rather
-                 than a swap, so there is never a moment with no number in the
-                 ring. */
+              /* Both numbers stay stacked in one grid cell, so the ring is
+                 never empty mid-turn. */
               <span
                 className='complete-circle-count complete-roll'
                 aria-hidden='true'

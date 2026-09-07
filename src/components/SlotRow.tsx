@@ -12,11 +12,10 @@ import {
 interface Props {
   slot: number
   verse: SlotVerse | null
-  /** How many slots this user has unlocked (1 at signup, +1 per early session). */
+  /** 1 at signup, +1 per early completed session. */
   unlocked: number
-  /** Opening of the verse text, quoted on the card; null while unknown. */
   snippet: string | null
-  /** The user's local date, for deciding whether a correct run is still live. */
+  /** The user's local date, for judging whether a correct run is still live. */
   today: string
 }
 
@@ -28,12 +27,10 @@ export default function SlotRow({
   today,
 }: Props) {
   if (verse) {
-    // The advancing run has to land inside one calendar day, so a run carried
-    // over from an earlier day counts for nothing — same as on the server.
+    // A run carried over from an earlier day counts for nothing, as on the server.
     const run = verse.streakDate === today ? verse.consecutiveCorrect : 0
 
-    // learning_light is the floor: two misses there change nothing, so there's
-    // no risk worth warning about.
+    // learning_light is the floor — nothing below it to warn about.
     const tier = LEARNING_ORDER.indexOf(verse.stage)
     const nextDown = tier > 0 ? LEARNING_ORDER[tier - 1] : null
     const missesLeft = TIER_DOWNGRADE_THRESHOLD - verse.consecutiveIncorrect
@@ -59,8 +56,7 @@ export default function SlotRow({
         )}
 
         {verse.tierChangeUsedToday ? (
-          // One tier change per verse per day: today's extra correct answers
-          // are practice, so a progress bar toward advancing would be a lie.
+          // One tier change per verse per day, so a progress bar would lie.
           <div className='advance-row'>
             <span className='advance-label'>
               Upgraded today · next upgrade tomorrow
@@ -96,7 +92,7 @@ export default function SlotRow({
     )
   }
 
-  // Slot ramp-up is session-driven, not calendar-driven (API README, "Slots").
+  // Session-driven, not calendar-driven (API README, "Slots").
   const sessionsAway = slot - unlocked
   const copy =
     sessionsAway <= 0
@@ -118,11 +114,8 @@ export default function SlotRow({
   )
 }
 
-/**
- * The occupied-slot card with its text replaced by placeholders. The advance
- * rail renders for real in its empty state, so the card keeps its exact height
- * and only the segments fill in when the verse arrives.
- */
+/** The advance rail renders for real in its empty state, so the card keeps its
+    exact height and only the segments fill in when the verse arrives. */
 export function SlotRowSkeleton() {
   return (
     <div className='slot-card'>
@@ -130,7 +123,6 @@ export function SlotRowSkeleton() {
         <Skeleton variant='text' w='44%' h={15} />
         <Skeleton variant='chip' w={78} h={20} />
       </div>
-      {/* Two lines: the 60-character snippet wraps once at every phone width. */}
       <p className='slot-snippet' aria-hidden='true'>
         <SkeletonText lines={2} widths={['100%', '54%']} />
       </p>

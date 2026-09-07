@@ -2,11 +2,8 @@ import type { VerseListItem } from '../../api/types'
 import { Skeleton } from '../Skeleton'
 import { isMemorized } from '../../lib/verses'
 
-/**
- * The one-line tally above the arc, and the bar that shows the same numbers as
- * a share of the hundred. The bar's track renders either way, so the card keeps
- * its height and only the fills arrive.
- */
+/** The tally above the arc. The bar's track renders either way, so only the
+    fills arrive with the data. */
 export default function HundredStats({
   verses,
 }: {

@@ -5,7 +5,7 @@ interface Props {
   description: ReactNode
   checked: boolean
   busy?: boolean
-  /** Replaces the switch entirely when this platform or deployment can't do
+  /** Replaces the switch when this platform or deployment can't do
       it at all — an explanation is more use than a control that can't work. */
   unavailable?: ReactNode
   /** Sits under the switch when it can work, but something needs saying. */
@@ -16,14 +16,8 @@ interface Props {
   children?: ReactNode
 }
 
-/**
- * One on/off account setting.
- *
- * A sibling of PreferenceCard rather than a mode of it: that component is
- * options -> select -> dirty -> explicit Save, and a switch has no options, no
- * dirty state (it saves on flip) and several platform states PreferenceCard
- * has no vocabulary for. Same visual language, different shape.
- */
+/** One on/off account setting. Saves on flip, so unlike PreferenceCard there
+    is no dirty state and no Save button. */
 export default function ToggleCard({
   eyebrow,
   description,

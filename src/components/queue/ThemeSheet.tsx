@@ -1,12 +1,8 @@
 import { useState } from 'react'
 import type { QueueTheme } from '../../api/types'
+import SelectableRow from '../SelectableRow'
 import Sheet from '../Sheet'
 
-/**
- * Bringing a whole theme forward. The pick lives in here and resets itself once
- * the exit animation is done, so a cleared selection never flickers through on
- * the way out.
- */
 export default function ThemeSheet({
   open,
   themes,
@@ -58,27 +54,15 @@ export default function ThemeSheet({
         its own order. Everything else keeps its place behind them.
       </p>
       <div className='theme-list'>
-        {themes.map((theme) => {
-          const on = pick === theme.id
-          return (
-            <button
-              key={theme.id}
-              className={on ? 'theme-option theme-option-on' : 'theme-option'}
-              onClick={() => setPick(on ? null : theme.id)}
-            >
-              <span className='theme-option-main'>
-                <span className='theme-name'>{theme.name}</span>
-                <span className='theme-count'>{theme.queuedCount} in queue</span>
-              </span>
-              <span
-                className={on ? 'theme-mark theme-mark-on' : 'theme-mark'}
-                aria-hidden='true'
-              >
-                {on ? '✓' : ''}
-              </span>
-            </button>
-          )
-        })}
+        {themes.map((theme) => (
+          <SelectableRow
+            key={theme.id}
+            name={theme.name}
+            note={`${theme.queuedCount} in queue`}
+            selected={pick === theme.id}
+            onSelect={() => setPick(pick === theme.id ? null : theme.id)}
+          />
+        ))}
       </div>
     </Sheet>
   )

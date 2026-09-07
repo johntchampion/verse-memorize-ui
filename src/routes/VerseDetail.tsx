@@ -9,6 +9,7 @@ import SoonerCard from '../components/verses/SoonerCard'
 import VerseCard from '../components/verses/VerseCard'
 import { useApi } from '../hooks/useApi'
 import { useBack } from '../hooks/useBack'
+import { messageOf } from '../lib/errors'
 
 /**
  * One verse, end to end: the text, where it sits on the ladder, every attempt
@@ -46,9 +47,7 @@ export default function VerseDetail() {
         me.refetch()
       })
       .catch((err: unknown) => {
-        setActionError(
-          err instanceof Error ? err.message : 'Something went wrong.',
-        )
+        setActionError(messageOf(err, 'Something went wrong.'))
       })
       .finally(() => setActionBusy(false))
   }

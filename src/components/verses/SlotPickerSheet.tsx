@@ -1,16 +1,12 @@
 import { useState } from 'react'
 import type { SlotVerse } from '../../api/types'
+import SelectableRow from '../SelectableRow'
 import Sheet from '../Sheet'
 import { STAGE_LABELS } from '../../lib/exercise'
 
 /** 1-3 = replace that slot; 0 = no slot, just make it next in the queue. */
 export type SlotPick = number
 
-/**
- * Choosing which verse steps aside. The pick lives in here and resets itself
- * once the exit animation is done, so a cleared selection never flickers
- * through on the way out.
- */
 export default function SlotPickerSheet({
   open,
   reference,
@@ -75,53 +71,23 @@ export default function SlotPickerSheet({
         in the queue.
       </p>
       <div className='theme-list'>
-        {slots.map((slot) => {
-          const on = pick === slot.slot
-          return (
-            <button
-              key={slot.userVerseId}
-              className={on ? 'theme-option theme-option-on' : 'theme-option'}
-              onClick={() => slot.slot !== null && toggle(slot.slot)}
-            >
-              <span className='theme-option-main'>
-                <span className='theme-name'>
-                  {slot.reference ?? slot.verseId}
-                </span>
-                <span className='theme-count'>{STAGE_LABELS[slot.stage]}</span>
-              </span>
-              <span
-                className={on ? 'theme-mark theme-mark-on' : 'theme-mark'}
-                aria-hidden='true'
-              >
-                {on ? '✓' : ''}
-              </span>
-            </button>
-          )
-        })}
+        {slots.map((slot) => (
+          <SelectableRow
+            key={slot.userVerseId}
+            name={slot.reference ?? slot.verseId}
+            note={STAGE_LABELS[slot.stage]}
+            selected={pick === slot.slot}
+            onSelect={() => slot.slot !== null && toggle(slot.slot)}
+          />
+        ))}
         {allowQueueFront && (
-          <button
-            className={
-              pick === 0
-                ? 'theme-option theme-option-alt theme-option-on'
-                : 'theme-option theme-option-alt'
-            }
-            onClick={() => toggle(0)}
-          >
-            <span className='theme-option-main'>
-              <span className='theme-name'>
-                None — put it first in the queue
-              </span>
-              <span className='theme-count'>
-                Keeps all three going; starts the moment a slot frees up
-              </span>
-            </span>
-            <span
-              className={pick === 0 ? 'theme-mark theme-mark-on' : 'theme-mark'}
-              aria-hidden='true'
-            >
-              {pick === 0 ? '✓' : ''}
-            </span>
-          </button>
+          <SelectableRow
+            variant='alt'
+            name='None — put it first in the queue'
+            note='Keeps all three going; starts the moment a slot frees up'
+            selected={pick === 0}
+            onSelect={() => toggle(0)}
+          />
         )}
       </div>
     </Sheet>

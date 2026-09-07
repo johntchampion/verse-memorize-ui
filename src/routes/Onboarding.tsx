@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import ProgressBar from '../components/ProgressBar'
 import StageLadder from '../components/StageLadder'
 import { useAuth } from '../context/auth'
+import { messageOf } from '../lib/errors'
 
 /**
  * First-run cold open: no pitch, one verse, straight in. A hook screen, a
@@ -227,7 +228,7 @@ function SignupStep({ onSignIn }: { onSignIn: () => void }) {
       await signup(email.trim(), password, timezone)
       navigate('/', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-up failed')
+      setError(messageOf(err, 'Sign-up failed'))
       setSubmitting(false)
     }
   }

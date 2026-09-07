@@ -10,6 +10,7 @@ import TileExercise from '../components/session/TileExercise'
 import TypedExercise from '../components/session/TypedExercise'
 import { hold } from '../lib/motion'
 import { presentEvent, type SessionEvent } from '../lib/sessionEvents'
+import { messageOf } from '../lib/errors'
 
 type Phase = 'loading' | 'empty' | 'running' | 'wrapping' | 'done'
 
@@ -115,10 +116,7 @@ export default function Session() {
     } catch (err) {
       if (loadTokenRef.current !== token) return
       setError({
-        message:
-          err instanceof Error
-            ? err.message
-            : 'Could not load today’s session.',
+        message: messageOf(err, 'Could not load today’s session.'),
         retry: () => void load(),
       })
     }
@@ -163,8 +161,7 @@ export default function Session() {
     } catch (err) {
       setLeaving(false)
       setError({
-        message:
-          err instanceof Error ? err.message : 'Could not record the session.',
+        message: messageOf(err, 'Could not record the session.'),
         retry: () => void finish(),
       })
     }
@@ -199,8 +196,7 @@ export default function Session() {
       }
     } catch (err) {
       setError({
-        message:
-          err instanceof Error ? err.message : 'Could not save that answer.',
+        message: messageOf(err, 'Could not save that answer.'),
         retry: () => {
           setError(null)
           void submit(correct)

@@ -10,6 +10,7 @@ import {
   pushSupported,
   subscribeThisBrowser,
 } from '../lib/push'
+import { messageOf } from '../lib/errors'
 
 export type PushState =
   /** No PushManager at all — an older browser, or desktop Safari before 16. */
@@ -118,11 +119,7 @@ export function usePushReminders(
           } else if (err instanceof ApiError && err.status === 503) {
             setBlocker('unavailable')
           } else {
-            setError(
-              err instanceof Error
-                ? err.message
-                : 'Could not change your reminder setting.',
-            )
+            setError(messageOf(err, 'Could not change your reminder setting.'))
           }
           // Nothing was saved, so the switch goes back where it was.
           setPending(null)
@@ -142,9 +139,7 @@ export function usePushReminders(
         setError('No device received it. Try turning reminders off and on.')
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Could not send a test notification.',
-      )
+      setError(messageOf(err, 'Could not send a test notification.'))
     }
   }, [])
 

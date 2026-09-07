@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Alert from '../components/Alert';
 import { useAuth } from '../context/auth';
 import AppIcon from '../components/AppIcon';
+import { messageOf } from '../lib/errors';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -30,7 +31,7 @@ export default function Signup() {
       await signup(email.trim(), password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-up failed');
+      setError(messageOf(err, 'Sign-up failed'));
       setSubmitting(false);
     }
   }

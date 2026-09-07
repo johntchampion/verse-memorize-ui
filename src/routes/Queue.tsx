@@ -9,6 +9,7 @@ import QueueSlots from '../components/queue/QueueSlots'
 import ThemeSheet from '../components/queue/ThemeSheet'
 import { combineApi, useApi } from '../hooks/useApi'
 import { useBack } from '../hooks/useBack'
+import { messageOf } from '../lib/errors'
 
 /**
  * The practice queue: everything that hasn't been memorized and isn't in a
@@ -74,9 +75,7 @@ export default function Queue() {
     setIds(next)
     setCustomized(true)
     api.setQueueOrder(next).catch((err: unknown) => {
-      setSaveError(
-        err instanceof Error ? err.message : 'Could not save the new order.',
-      )
+      setSaveError(messageOf(err, 'Could not save the new order.'))
     })
   }
 
@@ -86,9 +85,7 @@ export default function Queue() {
       .resetQueue()
       .then(refreshAll)
       .catch((err: unknown) => {
-        setSaveError(
-          err instanceof Error ? err.message : 'Could not reset the order.',
-        )
+        setSaveError(messageOf(err, 'Could not reset the order.'))
       })
       .finally(() => setBusy(false))
   }
@@ -102,9 +99,7 @@ export default function Queue() {
         refreshAll()
       })
       .catch((err: unknown) => {
-        setSaveError(
-          err instanceof Error ? err.message : 'Could not move the theme.',
-        )
+        setSaveError(messageOf(err, 'Could not move the theme.'))
         setThemeSheet(false)
       })
       .finally(() => setBusy(false))

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { messageOf } from '../lib/errors'
 
 /**
  * One saved account preference: a local pick that only becomes the real value
@@ -45,7 +46,7 @@ export function usePreference(
       setPending(null)
       onSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : failureMessage)
+      setError(messageOf(err, failureMessage))
     } finally {
       setSaving(false)
     }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { messageOf } from '../lib/errors';
 
 export interface ApiState<T> {
   data: T | null;
@@ -49,7 +50,7 @@ export function useApi<T>(fetcher: () => Promise<T>): ApiState<T> {
           setSettled({
             tick,
             data: null,
-            error: err instanceof Error ? err.message : 'Something went wrong',
+            error: messageOf(err, 'Something went wrong'),
           });
         }
       });

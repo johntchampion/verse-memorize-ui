@@ -61,7 +61,9 @@ export default function Today() {
         <>
           {/* Shown at zero too — that's when saying so is worth most. */}
           {me.data && (
-            <span className='chip chip-streak streak-badge'>
+            <span
+              className={`chip chip-streak streak-badge${me.data.completedToday ? '' : ' streak-badge-pending'}`}
+            >
               {me.data.streak} day streak
             </span>
           )}

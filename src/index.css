@@ -1605,6 +1605,14 @@ a.btn:hover {
     border: 1.5px solid var(--amber-line);
 }
 
+/* Today's link in the chain isn't forged yet — same shape, none of the
+   amber, so the badge only glows once the day's practice has landed. */
+.streak-badge-pending {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--locked);
+}
+
 /* --- All tab: the hundred -------------------------------------------------- */
 
 .hundred-bar {

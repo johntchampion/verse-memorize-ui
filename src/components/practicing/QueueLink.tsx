@@ -27,7 +27,9 @@ export default function QueueLink({
         <Skeleton variant='text' w={92} h={11} style={{ margin: 0 }} />
       ) : (
         <span className='queue-link-count'>
-          {waiting} {waiting === 1 ? 'verse' : 'verses'} waiting
+          {waiting === 0
+            ? 'Nothing waiting'
+            : `${waiting} ${waiting === 1 ? 'verse' : 'verses'} waiting`}
         </span>
       )}
       <span className='queue-link-chev' aria-hidden='true'>

@@ -84,15 +84,12 @@ export default function SlotRow({ slot, verse, snippet, today }: Props) {
     )
   }
 
-  // All 3 slots are live from signup and refill immediately on graduation;
-  // a slot only sits empty once the practice queue itself runs dry (API
-  // README, "Slots") — there's no verse left to fill it.
   return (
     <div className='slot-empty'>
       <div>
         <div className='slot-empty-title'>Slot {slot}</div>
         <div className='slot-empty-copy'>
-          Queue exhausted — no verse left to fill this slot
+          Open — waiting for a verse to come into practice
         </div>
       </div>
     </div>

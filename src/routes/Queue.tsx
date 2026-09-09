@@ -12,15 +12,16 @@ import { combineApi, useApi } from '../hooks/useApi'
 import { useBack } from '../hooks/useBack'
 import { useQueueOrder } from '../hooks/useQueueOrder'
 
-/** Three states for the lead paragraph: pending, an order to describe, or a
-    failure that still deserves a line saying what the screen is. */
+/** Four states for the lead paragraph: pending, an order to describe, or an
+    empty line or failure that still deserves a line saying what the screen is. */
 function lede(
   pending: boolean,
   data: QueueResponse | null,
   customized: boolean,
 ): ReactNode {
   if (pending) return <SkeletonText lines={2} widths={['100%', '62%']} />
-  if (!data) return 'Everything waiting to enter your practice slots.'
+  if (!data || data.queue.length === 0)
+    return 'Everything waiting to enter your practice slots.'
   return customized
     ? 'Your order. Whenever a slot frees up, the verse at the top of the line moves in.'
     : 'Default order — the arc, front to back. Nudge any verse up to practice it sooner.'
@@ -57,6 +58,10 @@ export default function Queue() {
   const nextUp =
     readyIds && readyIds.length > 0 ? byId.get(readyIds[0]) : undefined
 
+  // Nothing to reorder once the line is empty. Held open while ids are still
+  // null so the loading frame keeps its shape.
+  const showActions = readyIds === null || readyIds.length > 0
+
   return (
     <Screen
       leading={<BackButton onClick={back} label='Back' />}
@@ -70,22 +75,24 @@ export default function Queue() {
       error={me.error ?? queue.error}
       onRetry={all.refetch}
     >
-      <div className='queue-actions'>
-        <button
-          className='btn-ghost queue-action'
-          onClick={() => setThemeSheet(true)}
-          disabled={order.busy || !readyIds}
-        >
-          Move a theme to top
-        </button>
-        <button
-          className='btn-ghost queue-action'
-          onClick={order.resetOrder}
-          disabled={order.busy || !order.customized || !readyIds}
-        >
-          Restore default order
-        </button>
-      </div>
+      {showActions && (
+        <div className='queue-actions'>
+          <button
+            className='btn-ghost queue-action'
+            onClick={() => setThemeSheet(true)}
+            disabled={order.busy || !readyIds}
+          >
+            Move a theme to top
+          </button>
+          <button
+            className='btn-ghost queue-action'
+            onClick={order.resetOrder}
+            disabled={order.busy || !order.customized || !readyIds}
+          >
+            Restore default order
+          </button>
+        </div>
+      )}
 
       <QueueSlots
         slots={ready ? (me.data?.slots ?? null) : null}

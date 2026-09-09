@@ -29,10 +29,20 @@ function QueueRowSkeleton({ index, width }: { index: number; width: string }) {
         <Skeleton variant='text' w={width} style={{ marginTop: 4 }} />
       </span>
       <span className='queue-arrows'>
-        <button className='queue-arrow' disabled aria-hidden='true' tabIndex={-1}>
+        <button
+          className='queue-arrow'
+          disabled
+          aria-hidden='true'
+          tabIndex={-1}
+        >
           ▲
         </button>
-        <button className='queue-arrow' disabled aria-hidden='true' tabIndex={-1}>
+        <button
+          className='queue-arrow'
+          disabled
+          aria-hidden='true'
+          tabIndex={-1}
+        >
           ▼
         </button>
       </span>
@@ -58,6 +68,15 @@ export default function QueueList({
           <QueueRowSkeleton key={i} index={i} width={SKELETON_WIDTHS[i]} />
         ))}
       </ol>
+    )
+  }
+
+  if (ids.length === 0) {
+    return (
+      <p className='small muted queue-empty-line'>
+        Nothing waiting. If a verse slips in review, it comes back here for
+        practice.
+      </p>
     )
   }
 

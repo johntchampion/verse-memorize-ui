@@ -1,10 +1,17 @@
 import { Link } from 'react-router-dom'
+import type { MeResponse } from '../../api/types'
 import type { Path } from '../../lib/path'
 import { Skeleton } from '../Skeleton'
 
 /** Leads exactly where the live stop leads, until the plan is finished — then
     it becomes the way into extra practice, which counts toward nothing. */
-export default function PathCta({ path }: { path: Path | null }) {
+export default function PathCta({
+  path,
+  slots,
+}: {
+  path: Path | null
+  slots: MeResponse['slots'] | null
+}) {
   // Sized to the button it stands in for, so the settle is small either way.
   if (!path) {
     return (
@@ -24,6 +31,18 @@ export default function PathCta({ path }: { path: Path | null }) {
   if (path.total === 0) return null
 
   if (path.complete) {
+    if (slots && slots.active.length === 0) {
+      return (
+        <div className='path-note'>
+          <p className='eyebrow'>Nothing in practice</p>
+          <p className='path-note-copy'>
+            Every verse is in review right now. If one slips, it comes back to
+            practice and your slots fill again.
+          </p>
+        </div>
+      )
+    }
+
     return (
       <Link to='/session?practice=1' className='cta cta-center cta-outline'>
         <span className='cta-title'>Keep practicing</span>

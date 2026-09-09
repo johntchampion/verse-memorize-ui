@@ -1290,6 +1290,25 @@ a.btn:hover {
     opacity: 1;
 }
 
+/* Stands in for the outline CTA when there's nothing in a slot to drill. Same
+   footprint, but dashed and unclickable, so the dock reads as waiting rather
+   than as a button that failed to appear. */
+.path-note {
+    padding: 22px;
+    border-radius: 26px;
+    border: 1.5px dashed var(--dash);
+    text-align: center;
+}
+
+.path-note-copy {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.45;
+    text-wrap: pretty;
+    color: var(--locked);
+}
+
 /*
  * Once the day's path is behind you there's nothing left to walk, so the path
  * itself is gone rather than sitting there finished — replaced by this
@@ -2424,6 +2443,12 @@ a.btn:hover {
 
 .queue-waiting-label {
     margin: 16px 0 8px;
+}
+
+/* The line itself when nothing is waiting — one sentence, no card. */
+.queue-empty-line {
+    margin-top: 8px;
+    font-weight: 700;
 }
 
 .queue-list {

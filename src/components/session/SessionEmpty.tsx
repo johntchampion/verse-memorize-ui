@@ -9,7 +9,7 @@ export default function SessionEmpty({ practice }: { practice: boolean }) {
       <h1 style={{ fontFamily: 'var(--serif)' }}>All caught up</h1>
       <p className='muted'>
         {practice
-          ? 'There are no verses in your practice slots to drill.'
+          ? 'Nothing is in your practice slots to drill. Verses come back to practice if they slip in review.'
           : 'Nothing is due right now. Come back tomorrow.'}
       </p>
       <Link to='/' className='btn-ghost'>

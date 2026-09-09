@@ -89,7 +89,7 @@ export default function Today() {
             <p className='path-done-sub'>{copy?.sub}</p>
           </div>
           <div className='path-dock'>
-            <PathCta path={path} />
+            <PathCta path={path} slots={me.data?.slots ?? null} />
           </div>
         </div>
       ) : (

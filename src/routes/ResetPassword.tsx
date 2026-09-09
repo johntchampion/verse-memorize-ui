@@ -19,8 +19,9 @@ export default function ResetPassword() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (token) navigate('/reset-password', { replace: true })
-  }, [token, navigate])
+    // Replace just the history without navigating or altering any other state.
+    if (token) window.history.replaceState(null, '', '/reset-password')
+  }, [token])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()

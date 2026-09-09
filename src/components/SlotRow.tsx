@@ -12,20 +12,12 @@ import {
 interface Props {
   slot: number
   verse: SlotVerse | null
-  /** 1 at signup, +1 per early completed session. */
-  unlocked: number
   snippet: string | null
   /** The user's local date, for judging whether a correct run is still live. */
   today: string
 }
 
-export default function SlotRow({
-  slot,
-  verse,
-  unlocked,
-  snippet,
-  today,
-}: Props) {
+export default function SlotRow({ slot, verse, snippet, today }: Props) {
   if (verse) {
     // A run carried over from an earlier day counts for nothing, as on the server.
     const run = verse.streakDate === today ? verse.consecutiveCorrect : 0
@@ -92,23 +84,16 @@ export default function SlotRow({
     )
   }
 
-  // Session-driven, not calendar-driven (API README, "Slots").
-  const sessionsAway = slot - unlocked
-  const copy =
-    sessionsAway <= 0
-      ? 'All verses assigned'
-      : sessionsAway === 1
-        ? 'Opens after your next completed session'
-        : `Opens after ${sessionsAway} more completed sessions`
-
+  // All 3 slots are live from signup and refill immediately on graduation;
+  // a slot only sits empty once the practice queue itself runs dry (API
+  // README, "Slots") — there's no verse left to fill it.
   return (
-    <div className='slot-locked'>
-      <span className='slot-locked-icon' aria-hidden='true'>
-        🔒
-      </span>
+    <div className='slot-empty'>
       <div>
-        <div className='slot-locked-title'>Slot {slot}</div>
-        <div className='slot-locked-copy'>{copy}</div>
+        <div className='slot-empty-title'>Slot {slot}</div>
+        <div className='slot-empty-copy'>
+          Queue exhausted — no verse left to fill this slot
+        </div>
       </div>
     </div>
   )

@@ -96,7 +96,6 @@ export interface MeResponse {
   versesStarted: number
   slots: {
     max: number
-    unlocked: number
     active: SlotVerse[]
   }
 }

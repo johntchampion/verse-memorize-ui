@@ -6,8 +6,8 @@ import { todayInTimezone } from '../../lib/dates'
 const SKELETON_SLOTS = 3
 
 /**
- * The three learning slots, filled, locked or pending. The verse list is only
- * for the snippets, so a slot draws without it.
+ * The three learning slots, filled or (rarely, once the queue runs dry)
+ * empty. The verse list is only for the snippets, so a slot draws without it.
  */
 export default function SlotList({
   profile,
@@ -34,7 +34,6 @@ export default function SlotList({
                 key={slot}
                 slot={slot}
                 verse={verse}
-                unlocked={profile.slots.unlocked}
                 snippet={verse ? (textById.get(verse.verseId) ?? null) : null}
                 // Day boundaries follow the profile's timezone, not the
                 // device's.

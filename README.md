@@ -122,7 +122,7 @@ API's default and change it in Settings.
 **The client judges correctness.** `POST /api/attempt` takes a
 `correct: boolean` — the server never sees the user's actual answer and never
 sends an answer key. The runner therefore fetches each queued verse's full
-text (`GET /api/verses/:id`, available for any unlocked verse) and
+text (`GET /api/verses/:id`) and
 `lib/exercise.ts` derives per-blank answers by aligning the full text with the
 exercise's `blankedText`, token by token. The alignment relies on both sides
 using the same whitespace tokenization and word-core regex

@@ -1510,7 +1510,7 @@ a.btn:hover {
     color: var(--coral-text);
 }
 
-.slot-locked {
+.slot-empty {
     border: 1.5px dashed var(--dash);
     border-radius: var(--radius);
     padding: 16px 18px;
@@ -1519,26 +1519,14 @@ a.btn:hover {
     gap: 12px;
 }
 
-.slot-locked-icon {
-    width: 30px;
-    height: 30px;
-    flex: none;
-    border-radius: 50%;
-    background: var(--line-soft);
-    display: grid;
-    place-items: center;
-    font-size: 0.8rem;
-    color: var(--locked);
-}
-
-.slot-locked-title {
+.slot-empty-title {
     font-family: var(--serif);
     font-size: 1rem;
     font-weight: 700;
     color: var(--locked);
 }
 
-.slot-locked-copy {
+.slot-empty-copy {
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--locked);

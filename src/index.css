@@ -292,11 +292,13 @@ a.btn:hover {
 }
 
 @keyframes btn-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* A switch built on a real checkbox: the input carries the state and the
-   keyboard behaviour, the track and thumb are what you see. */
+   keyboard behavior, the track and thumb are what you see. */
 .toggle-row {
     display: flex;
     align-items: center;
@@ -335,21 +337,21 @@ a.btn:hover {
     transition: transform 120ms ease;
 }
 
-.toggle-input:checked + .toggle-track {
+.toggle-input:checked+.toggle-track {
     background: var(--coral);
     border-color: var(--coral-deep);
 }
 
-.toggle-input:checked + .toggle-track .toggle-thumb {
+.toggle-input:checked+.toggle-track .toggle-thumb {
     transform: translateX(24px);
 }
 
-.toggle-input:focus-visible + .toggle-track {
+.toggle-input:focus-visible+.toggle-track {
     outline: 2px solid var(--coral);
     outline-offset: 2px;
 }
 
-.toggle-input:disabled + .toggle-track {
+.toggle-input:disabled+.toggle-track {
     opacity: 0.6;
 }
 
@@ -2595,6 +2597,7 @@ a.btn:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .sheet-riser,
     .sheet-handle {
         transition: none;

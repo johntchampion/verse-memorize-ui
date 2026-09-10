@@ -270,7 +270,7 @@ responsibilities from the plugin to us, and all three fail quietly:
 1. **`skipWaiting()` / `clientsClaim()`.** `registerType: 'autoUpdate'` still
    sets these — but on the options only `generateSW` reads. Under
    `injectManifest` `sw.ts` must call them itself, or every install is stranded
-   on the worker it first saw. This one can only be caught on the *second*
+   on the worker it first saw. This one can only be caught on the _second_
    deploy after a change, so check it there.
 2. **The navigation fallback.** `generateSW` served `index.html` for
    navigations by default; `sw.ts` re-registers it with `NavigationRoute` +
@@ -287,7 +287,7 @@ Unlike before, the worker **does** register under `vite dev`
 (`devOptions.enabled`), because push only works in a secure context and
 `localhost` is the one available for free. Nothing is precached in dev, so
 pages stay live. Use `npm run build && npm run preview` to test install
-behaviour and the precache.
+behavior and the precache.
 
 ### Testing push locally
 
@@ -306,16 +306,16 @@ The API needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set, or
 `GET /api/push/key` answers `503` and the toggle renders as unavailable.
 
 A fresh device usually lands on **Allow notifications on this device** rather
-than the test button, because the reminder preference is per *account* while a
-`PushSubscription` is per *browser install*: signing in somewhere new inherits
+than the test button, because the reminder preference is per _account_ while a
+`PushSubscription` is per _browser install_: signing in somewhere new inherits
 the preference but nothing else. The card shows that button whenever the
 preference is on and this browser has no usable subscription — permission never
 asked for, or the server's row pruned after a `404`/`410`. Where permission is
 granted the repair is silent, so the button appearing means the browser needs a
-prompt, not that something is broken. A hard *denied* is different again: the
+prompt, not that something is broken. A hard _denied_ is different again: the
 switch stays on, the button does not appear, and the card says this device is
 blocked, because `requestPermission()` resolves straight back to `denied`
-without asking anyone. Reset the permission to *Ask* in site settings to get the
+without asking anyone. Reset the permission to _Ask_ in site settings to get the
 button back — no need to flip the toggle.
 
 ## Out of scope for v1

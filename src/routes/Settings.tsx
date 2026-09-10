@@ -102,7 +102,7 @@ export default function Settings() {
 
       <ToggleCard
         eyebrow='Daily reminder'
-        description='A nudge to practise, half an hour after the time you usually start — and never later than 9pm.'
+        description='A nudge to practice, half an hour after the time you usually start — and never later than 9pm.'
         checked={reminders.enabled}
         busy={reminders.busy}
         unavailable={reminders.unavailableMessage}

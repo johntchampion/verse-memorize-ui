@@ -58,7 +58,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'Time to practise', {
+    self.registration.showNotification(data.title ?? 'Time to practice', {
       body: data.body ?? 'Your verses are waiting.',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',

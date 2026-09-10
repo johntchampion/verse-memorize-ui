@@ -8,6 +8,12 @@ export function pushSupported(): boolean {
   )
 }
 
+/** Null where the API is absent, so callers never touch `Notification` on a
+    platform that doesn't have it. */
+export function notificationPermission(): NotificationPermission | null {
+  return 'Notification' in window ? Notification.permission : null
+}
+
 /** True when the app is running as an installed PWA rather than in a tab. */
 export function isStandalone(): boolean {
   return (
@@ -56,13 +62,23 @@ function sameKey(subscription: PushSubscription, key: Uint8Array): boolean {
   )
 }
 
-export async function enablePush(): Promise<void> {
+/**
+ * Everything this browser needs to receive a push, and nothing about the
+ * account preference: permission plus a subscription the server knows about.
+ * Called on its own when the preference is already on but this device was never
+ * asked, or its subscription went missing.
+ */
+export async function enableThisDevice(): Promise<void> {
   // Must run before any await: Safari only honours requestPermission while the
   // user gesture is still on the stack.
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new PermissionRefused(permission)
 
   await subscribeThisBrowser()
+}
+
+export async function enablePush(): Promise<void> {
+  await enableThisDevice()
   await api.updateProfile({ remindersEnabled: true })
 }
 
@@ -70,6 +86,10 @@ export async function enablePush(): Promise<void> {
  * Reuses an existing subscription only when it was made with the server's
  * current key — one made against a different key produces pushes this server
  * cannot sign, and reusing it blindly is an unexplainable silent failure.
+ *
+ * Safe to call on every load: `/api/push/subscribe` upserts on the endpoint, so
+ * re-posting an unchanged subscription is how a server row that was pruned
+ * (a 404/410 from the push service) comes back without the user doing anything.
  */
 export async function subscribeThisBrowser(): Promise<void> {
   const { publicKey } = await api.pushKey()
@@ -101,10 +121,4 @@ export async function disablePush(): Promise<void> {
 
   await api.pushUnsubscribe(subscription.endpoint).catch(() => {})
   await subscription.unsubscribe()
-}
-
-export async function hasLocalSubscription(): Promise<boolean> {
-  const registration = await navigator.serviceWorker.getRegistration()
-  const subscription = await registration?.pushManager.getSubscription()
-  return subscription != null
 }

@@ -110,6 +110,15 @@ export default function Settings() {
         error={reminders.error}
         onChange={reminders.toggle}
       >
+        {reminders.state === 'needs-device' && (
+          <button
+            className='btn'
+            disabled={reminders.busy}
+            onClick={() => void reminders.enableThisDevice()}
+          >
+            Allow notifications on this device
+          </button>
+        )}
         {reminders.state === 'on' && (
           <button
             className='btn-ghost'

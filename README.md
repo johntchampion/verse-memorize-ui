@@ -305,6 +305,19 @@ iOS.
 The API needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set, or
 `GET /api/push/key` answers `503` and the toggle renders as unavailable.
 
+A fresh device usually lands on **Allow notifications on this device** rather
+than the test button, because the reminder preference is per *account* while a
+`PushSubscription` is per *browser install*: signing in somewhere new inherits
+the preference but nothing else. The card shows that button whenever the
+preference is on and this browser has no usable subscription — permission never
+asked for, or the server's row pruned after a `404`/`410`. Where permission is
+granted the repair is silent, so the button appearing means the browser needs a
+prompt, not that something is broken. A hard *denied* is different again: the
+switch stays on, the button does not appear, and the card says this device is
+blocked, because `requestPermission()` resolves straight back to `denied`
+without asking anyone. Reset the permission to *Ask* in site settings to get the
+button back — no need to flip the toggle.
+
 ## Out of scope for v1
 
 Offline exercise-taking, dark mode, admin/verse-editing UI, and anything beyond

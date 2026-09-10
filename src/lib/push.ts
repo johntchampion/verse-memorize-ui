@@ -110,6 +110,13 @@ export async function subscribeThisBrowser(): Promise<void> {
   await api.pushSubscribe(subscription.toJSON() as PushSubscriptionJSON)
 }
 
+export async function clearDailyReminder(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return
+  const registration = await navigator.serviceWorker.getRegistration()
+  const shown = await registration?.getNotifications({ tag: 'daily-reminder' })
+  shown?.forEach((notification) => notification.close())
+}
+
 export async function disablePush(): Promise<void> {
   // Server first: if the browser-side unsubscribe then fails, the half that
   // matters has already landed.

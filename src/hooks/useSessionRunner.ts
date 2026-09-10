@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import type { SessionExercise } from '../api/types'
 import { messageOf } from '../lib/errors'
 import { hold } from '../lib/motion'
+import { clearDailyReminder } from '../lib/push'
 import { presentEvent, type SessionEvent } from '../lib/sessionEvents'
 
 export type SessionPhase = 'loading' | 'empty' | 'running' | 'wrapping' | 'done'
@@ -110,6 +111,8 @@ export function useSessionRunner(practice: boolean) {
           if (result.events.length > 0) {
             setEvents((prev) => [...prev, ...result.events.map(presentEvent)])
           }
+          // A failure here can't be allowed to block the completion screen.
+          void clearDailyReminder().catch(() => {})
         }
         let streak: number | null = null
         try {

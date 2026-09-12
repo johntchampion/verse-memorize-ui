@@ -9,6 +9,7 @@ import SoonerCard from '../components/verses/SoonerCard'
 import VerseCard from '../components/verses/VerseCard'
 import { useApi } from '../hooks/useApi'
 import { useBack } from '../hooks/useBack'
+import { todayInTimezone } from '../lib/dates'
 import { messageOf } from '../lib/errors'
 
 /** One verse end to end: text, ladder position, attempts, and the way to pull
@@ -24,6 +25,9 @@ export default function VerseDetail() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const data = detail.data
+
+  const timezone = me.data?.user.timezone
+  const today = timezone ? todayInTimezone(timezone) : null
 
   // The error clears on `onExited`, so it doesn't flicker away under the
   // sheet's exit animation.
@@ -78,7 +82,7 @@ export default function VerseDetail() {
         error={actionError}
         onOpen={() => setSlotSheet(true)}
       />
-      <ProgressCard detail={data} />
+      <ProgressCard detail={data} today={today} />
       <HistoryCard detail={data} />
 
       {data && (

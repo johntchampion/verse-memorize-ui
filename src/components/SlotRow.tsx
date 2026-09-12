@@ -13,23 +13,21 @@ interface Props {
   slot: number
   verse: SlotVerse | null
   snippet: string | null
-  /** The user's local date, for judging whether a correct run is still live. */
+  /** The user's local date, for judging whether either run is still live. */
   today: string
 }
 
 export default function SlotRow({ slot, verse, snippet, today }: Props) {
   if (verse) {
-    // A run carried over from an earlier day counts for nothing, as on the server.
-    const run = verse.streakDate === today ? verse.consecutiveCorrect : 0
+    const live = verse.streakDate === today
+    const run = live ? verse.consecutiveCorrect : 0
+    const misses = live ? verse.consecutiveIncorrect : 0
 
     // learning_light is the floor — nothing below it to warn about.
     const tier = LEARNING_ORDER.indexOf(verse.stage)
     const nextDown = tier > 0 ? LEARNING_ORDER[tier - 1] : null
-    const missesLeft = TIER_DOWNGRADE_THRESHOLD - verse.consecutiveIncorrect
-    const atRisk =
-      nextDown !== null &&
-      verse.consecutiveIncorrect > 0 &&
-      !verse.tierChangeUsedToday
+    const missesLeft = TIER_DOWNGRADE_THRESHOLD - misses
+    const atRisk = nextDown !== null && misses > 0 && !verse.tierChangeUsedToday
 
     return (
       <Link
@@ -49,9 +47,10 @@ export default function SlotRow({ slot, verse, snippet, today }: Props) {
 
         {verse.tierChangeUsedToday ? (
           // One tier change per verse per day, so a progress bar would lie.
+          // `/api/me` doesn't say which direction it moved, so neither do we.
           <div className='advance-row'>
             <span className='advance-label'>
-              Upgraded today · next upgrade tomorrow
+              Tier changed today · next change tomorrow
             </span>
           </div>
         ) : (
@@ -76,8 +75,8 @@ export default function SlotRow({ slot, verse, snippet, today }: Props) {
         {atRisk && (
           <p className='slot-risk'>
             {missesLeft === 1
-              ? `One more miss drops to ${STAGE_LABELS[nextDown].toLowerCase()}`
-              : `${missesLeft} more misses drop to ${STAGE_LABELS[nextDown].toLowerCase()}`}
+              ? `One more miss today drops to ${STAGE_LABELS[nextDown].toLowerCase()}`
+              : `${missesLeft} more misses today drop to ${STAGE_LABELS[nextDown].toLowerCase()}`}
           </p>
         )}
       </Link>

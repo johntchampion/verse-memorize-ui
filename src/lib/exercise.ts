@@ -122,10 +122,10 @@ export function randomIndex(exclusiveMax: number): number {
   return Math.floor(Math.random() * exclusiveMax)
 }
 
-/** Display-only mirrors of the API's `stageMachine.ts` — they must agree with
-    it, so they live here rather than at call sites. */
+/** Display-only mirrors of the service's `domain/progression.ts` — they must
+    agree with it, so they live here rather than at call sites. */
 export const TIER_ADVANCE_THRESHOLD = 3
-export const TIER_DOWNGRADE_THRESHOLD = 2
+export const TIER_DOWNGRADE_THRESHOLD = 3
 export const REVIEW_ADVANCE_THRESHOLD = 3
 export const REVIEW_DEMOTION_THRESHOLD = 2
 

@@ -23,8 +23,13 @@ function chipClass(userVerse: UserVerse): string {
   return 'chip chip-active'
 }
 
-/** What this verse needs next, in consecutive-answer runs rather than a score. */
-function progressCopy(userVerse: UserVerse): string {
+/**
+ * What this verse needs next, in consecutive-answer runs rather than a score.
+ * `today` is the user's local date, or null while the profile is still loading;
+ * without it a learning run can't be told from a dead one carried over from
+ * yesterday, so the generic copy stands in.
+ */
+function progressCopy(userVerse: UserVerse, today: string | null): string {
   const { consecutive_correct: right, consecutive_incorrect: wrong } = userVerse
 
   if (userVerse.needs_relearning === 1) {
@@ -32,14 +37,14 @@ function progressCopy(userVerse: UserVerse): string {
   }
 
   if (isLearningStage(userVerse.stage)) {
-    const live = userVerse.streak_date !== null
-    if (wrong > 0) {
+    const live = today !== null && userVerse.streak_date === today
+    if (live && wrong > 0) {
       const left = TIER_DOWNGRADE_THRESHOLD - wrong
-      return `${wrong} missed in a row — ${left} more drops it a tier. Three right in one day moves it up.`
+      return `${wrong} missed in a row today — ${left} more drops it a tier. Three right in one day moves it up.`
     }
-    return live
+    return live && right > 0
       ? `${right} of ${TIER_ADVANCE_THRESHOLD} right in a row today. All three in one day moves it up a tier.`
-      : `Three right in a row within one day moves it up a tier — the run resets each morning.`
+      : `Three right in a row within one day moves it up a tier, three wrong drops it one — both runs reset each morning.`
   }
 
   if (userVerse.stage === 'mastered') {
@@ -56,8 +61,10 @@ function progressCopy(userVerse: UserVerse): string {
 /** Absent until the verse has been started — there is no progress to place. */
 export default function ProgressCard({
   detail,
+  today,
 }: {
   detail: VerseDetailResponse | null
+  today: string | null
 }) {
   const userVerse = detail?.userVerse
   if (!detail || !userVerse) return null
@@ -85,7 +92,7 @@ export default function ProgressCard({
         className='small muted'
         style={{ fontWeight: 600, marginTop: 12, lineHeight: 1.45 }}
       >
-        {progressCopy(userVerse)}
+        {progressCopy(userVerse, today)}
       </p>
 
       {(schedule || graduatedAt || parked) && status !== 'not_started' && (

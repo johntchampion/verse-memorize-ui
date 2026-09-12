@@ -229,12 +229,15 @@ CSS are the same numbers and have to move together).
 The rules live in the backend service; three of their consequences are easy to get wrong
 here.
 
-**A learning tier advances on 3 correct in a row _within one calendar day_.**
-`consecutive_correct` carries across days in the database but is dead for
-advancement once `streak_date` isn't today, so any "N / 3" the UI draws has to
-be gated on that date — see `SlotRow`. The day is the _user's_, from their
-profile timezone: `lib/dates.ts` mirrors the server's `todayInTimezone`, and
-comparing against the browser's own day would disagree for anyone travelling.
+**A learning tier advances on 3 correct in a row _within one calendar day_, and
+drops on 3 wrong in a row within one calendar day.** Both runs carry across days
+in the database but are dead for tier changes once `streak_date` isn't today —
+and one `streak_date` covers both directions — so any "N / 3" or "one more miss"
+the UI draws has to be gated on that date. See `SlotRow` and `ProgressCard`. The
+day is the _user's_, from their profile timezone: `lib/dates.ts` mirrors the
+server's `todayInTimezone`, and comparing against the browser's own day would
+disagree for anyone travelling. (Review demotion is the exception: 2 missed due
+dates, and those _do_ span days.)
 
 **A verse can change tier at most once per day, either direction.** After that
 the extra correct answers are practice, and `/api/me` reports

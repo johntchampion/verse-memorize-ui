@@ -25,9 +25,12 @@ export interface UserVerse {
   /** Zeroed by any wrong answer; in a learning tier the run must also land
       inside one calendar day — see `streak_date`. */
   consecutive_correct: number
-  /** Zeroed by any correct answer. May span days. */
+  /** Zeroed by any correct answer; in a learning tier the run must also land
+      inside one calendar day, mirroring the correct run — see `streak_date`.
+      In review it still spans due dates. */
   consecutive_incorrect: number
-  /** Local date `consecutive_correct` was accrued on; learning stages only. */
+  /** Local date whichever run is active — correct or incorrect — was accrued
+      on; learning stages only. */
   streak_date: string | null
   /** review/mastered only; null in a learning slot or while queued. */
   interval_days: number | null
@@ -75,7 +78,7 @@ export interface SlotVerse {
   stage: Stage
   consecutiveCorrect: number
   consecutiveIncorrect: number
-  /** A run from an earlier day no longer counts toward advancing. */
+  /** Either run, from an earlier day, no longer counts toward changing tier. */
   streakDate: string | null
   /** Already changed tier today, so it can't change again until tomorrow. */
   tierChangeUsedToday: boolean

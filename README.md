@@ -1,4 +1,4 @@
-# Verse Memorize — frontend
+# Verse Memorize — Progressive Web App
 
 A mobile-first, installable PWA for daily scripture memorization. Users work
 through a fixed bank of 100 verses, three at a time: new verses are drilled
@@ -9,23 +9,26 @@ This is the client only. It talks to **verse-memorize-api**, an Express +
 SQLite backend expected to live in a sibling directory
 (`../verse-memorize-api`) and to be running on port 3000.
 
-**The API's README is the spec for how progression works** — stages, streak
+**The backend service's README is the spec for how progression works** — stages, streak
 thresholds, the interval ladder, the relearning queue. This app renders that
 model; it never decides a transition itself. See
 [Progression model](#progression-model) below for what the UI has to know.
+
+The backend service manages and serves the data for this PWA is
+in [this GitHub repo](https://github.com/johntchampion/verse-memorize-service).
 
 ## Stack
 
 - React 19 + TypeScript + Vite (React Compiler enabled via Babel plugin)
 - `react-router-dom` for navigation
 - `vite-plugin-pwa` for the manifest and service worker
-- Plain `fetch` in a small hand-rolled API client — no data-fetching library
+- Plain `fetch` in a small hand-rolled REST API client — no data-fetching library
 - Plain global CSS (`src/index.css`) — no component library, no CSS-in-JS
 
 ## Getting started
 
 ```sh
-# 1. Start the API (sibling repo; needs JWT_SECRET in its .env)
+# 1. Start the backend service (sibling repo; needs JWT_SECRET in its .env)
 cd ../verse-memorize-api && npm install && npm run dev   # listens on :3000
 
 # 2. Start this app
@@ -223,7 +226,7 @@ CSS are the same numbers and have to move together).
 
 ## Progression model
 
-The rules live in the API; three of their consequences are easy to get wrong
+The rules live in the backend service; three of their consequences are easy to get wrong
 here.
 
 **A learning tier advances on 3 correct in a row _within one calendar day_.**
@@ -302,7 +305,7 @@ through the same hostname is the fallback. Avoid `@vitejs/plugin-basic-ssl` —
 a self-signed certificate can block service-worker registration outright on
 iOS.
 
-The API needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set, or
+The backend service needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set, or
 `GET /api/push/key` answers `503` and the toggle renders as unavailable.
 
 A fresh device usually lands on **Allow notifications on this device** rather
@@ -317,15 +320,3 @@ switch stays on, the button does not appear, and the card says this device is
 blocked, because `requestPermission()` resolves straight back to `denied`
 without asking anyone. Reset the permission to _Ask_ in site settings to get the
 button back — no need to flip the toggle.
-
-## Out of scope for v1
-
-Offline exercise-taking, dark mode, admin/verse-editing UI, and anything beyond
-simple CSS transitions.
-
-Push notifications are built, with one caveat worth setting expectations about:
-on iOS, Web Push exists only in a PWA installed to the Home Screen (16.4+), the
-APIs are simply absent in a Safari tab, and a denied permission is effectively
-permanent short of deleting and re-adding the app. The toggle detects all of
-that and explains it, but a real fraction of iPhone users will never get
-through it.
